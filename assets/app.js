@@ -256,14 +256,8 @@ var GH_MEDIA = "media";
 var ghSkipFetchUntil = 0;
 
 function ghConfig() {
-  try {
-    var raw = localStorage.getItem(GH_KEY);
-    if (!raw) return null;
-    var cfg = JSON.parse(raw);
-    if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) return null;
-    cfg.branch = cfg.branch || "main";
-    return cfg;
-  } catch (e) { return null; }
+  /* 雲端寫入（GitHub Token）已停用：只在 Spherse 內直接寫入資料檔 */
+  return null;
 }
 function ghSaveConfig(cfg) { localStorage.setItem(GH_KEY, JSON.stringify(cfg)); }
 function ghClearConfig() { localStorage.removeItem(GH_KEY); }
@@ -463,7 +457,7 @@ function ghUpload(file) {
   });
 }
 
-/* ── GitHub 設定視窗 ──────────────────────── */
+/* ── GitHub 設定視窗（已停用：ghConfig() 永遠回傳 null，這個彈窗不會被打開） ── */
 function openGhSettings() {
   var host = el("modalHost");
   host.innerHTML = "";
@@ -553,17 +547,16 @@ function openGhSettings() {
   host.appendChild(overlay);
 }
 
-function canEdit() { return !!sdk || !!ghConfig(); }
+function canEdit() { return !!sdk; }
 
 function updateEditAvailability() {
-  var editable = !!sdk || !!ghConfig();
+  var editable = !!sdk;
   el("editToggle").hidden = !editable;
   el("editToggle").classList.toggle("on", editMode);
   el("editToggle").textContent = editMode ? "完成編輯" : "編輯模式";
   var tag = el("roTag");
   if (tag) {
     if (sdk) { tag.hidden = true; }
-    else if (ghConfig()) { tag.hidden = false; tag.textContent = "GitHub 同步"; }
     else { tag.hidden = false; tag.textContent = "唯讀發佈版"; }
   }
   if (!editable && editMode) {
@@ -585,6 +578,7 @@ function parseRoute() {
 
 function render() {
   if (homeRandomTimer) { clearInterval(homeRandomTimer); homeRandomTimer = null; }
+  stopAtmosphere();
   var route = parseRoute();
   var accent = String(S.world.accent || "");
   if (/^#[0-9a-f]{6}$/i.test(accent)) {
@@ -879,22 +873,57 @@ function homePage() {
   var w = S.world;
   var page = h("div", { class: "page" });
 
-  var hero = h("div", { class: "hero" });
+  /* ── 全屏開卷首屏 ── */
+  var hero = h("div", { class: "opening" });
   var hb = heroBackdrop();
   if (hb) hero.appendChild(hb);
-  if (w.era) hero.appendChild(h("span", { class: "hero-era", text: w.era }));
-  hero.appendChild(h("h1", { text: w.name || "未命名世界" }));
-  if (w.tagline) hero.appendChild(h("p", { class: "tagline", text: w.tagline }));
-  if (w.intro) hero.appendChild(richText(w.intro, "intro"));
+  hero.appendChild(openingAtmosphere());
 
-  var actions = h("div", { class: "hero-actions" });
-  actions.appendChild(editButton("編輯世界觀", function () { editWorld(); }));
-  actions.appendChild(h("a", { class: "btn", href: "#/graph", text: "關係圖" }));
-  actions.appendChild(h("a", { class: "btn", href: "#/timeline", text: "時間綫" }));
-  actions.appendChild(h("a", { class: "btn", href: "#/map", text: "地圖" }));
-  actions.appendChild(h("a", { class: "btn", href: "#/gallery", text: "畫廊" }));
-  hero.appendChild(actions);
+  var inner = h("div", { class: "opening-inner" });
+  if (w.era) inner.appendChild(h("span", { class: "opening-era", text: w.era }));
+  inner.appendChild(h("h1", { text: w.name || "未命名世界" }));
+  if (w.tagline) inner.appendChild(h("p", { class: "opening-tagline", text: w.tagline }));
+
+  var oStats = h("div", { class: "opening-stats" });
+  [
+    ["人物", S.characters.length],
+    ["時間綫", S.events.length],
+    ["百科", S.entries.length],
+    ["畫廊", S.gallery.length]
+  ].forEach(function (pair) {
+    oStats.appendChild(h("span", null, h("b", { text: String(pair[1]) }), document.createTextNode(pair[0])));
+  });
+  inner.appendChild(oStats);
+
+  var oActions = h("div", { class: "opening-actions" });
+  oActions.appendChild(h("a", { class: "btn", href: "#/characters", text: "人物" }));
+  oActions.appendChild(h("a", { class: "btn", href: "#/timeline", text: "時間綫" }));
+  oActions.appendChild(h("a", { class: "btn", href: "#/map", text: "地圖" }));
+  inner.appendChild(oActions);
+
+  var hint = h("a", { class: "scroll-hint", href: "#/", title: "往下看世界觀" });
+  hint.appendChild(h("span", { text: "往下" }));
+  hint.appendChild(h("i"));
+  hint.addEventListener("click", function (e) {
+    e.preventDefault();
+    window.scrollTo({ top: window.innerHeight * 0.92, behavior: "smooth" });
+  });
+  inner.appendChild(hint);
+  hero.appendChild(inner);
   page.appendChild(hero);
+
+  /* ── 世界觀（首屏之下） ── */
+  if (w.intro || canEdit()) {
+    var introBlock = h("div", { class: "opening-intro" });
+    introBlock.appendChild(h("h2", { class: "tab-sub", text: "世界觀" }));
+    if (w.intro) introBlock.appendChild(richText(w.intro, "intro"));
+    introBlock.appendChild(h("div", { class: "hero-actions" },
+      editButton("編輯世界觀", function () { editWorld(); }),
+      h("a", { class: "btn", href: "#/graph", text: "關係圖" }),
+      h("a", { class: "btn", href: "#/gallery", text: "畫廊" })
+    ));
+    page.appendChild(introBlock);
+  }
 
   var stats = h("div", { class: "stats" },
     h("div", { class: "stat" }, h("b", { text: String(S.characters.length) }), h("span", { text: "人物" })),
@@ -927,6 +956,59 @@ function homePage() {
     : h("div", { class: "empty", text: editMode ? "還沒有任何人物，到「人物」頁新增。" : "這個世界還沒有填人物。" });
   page.appendChild(sectionBlock("主要人物", S.characters.length + " 位", charBody,
     [h("a", { class: "btn small", href: "#/characters", text: "全部 →" })]));
+
+  /* 時間綫速覽 */
+  if (S.events.length) {
+    var tlRows = h("div", { class: "home-tl" });
+    S.events.slice(-3).reverse().forEach(function (ev) {
+      var row = h("a", { class: "home-tl-row", href: "#/timeline" });
+      row.appendChild(h("span", { class: "home-tl-date", text: ev.date || "—" }));
+      row.appendChild(h("span", { class: "home-tl-title", text: ev.title || "未命名節點" }));
+      row.appendChild(h("span", { class: "home-tl-teaser", text: teaserText(ev.body) }));
+      tlRows.appendChild(row);
+    });
+    page.appendChild(sectionBlock("時間綫速覽", S.events.length + " 個節點", tlRows,
+      [h("a", { class: "btn small", href: "#/timeline", text: "完整時間綫 →" })]));
+  }
+
+  /* 百科速覽 */
+  if (S.entries.length) {
+    var catCount = {};
+    S.entries.forEach(function (e) {
+      var cat = String(e.category || "").trim() || "未分類";
+      catCount[cat] = (catCount[cat] || 0) + 1;
+    });
+    var catChips = h("div", { class: "chips" });
+    Object.keys(catCount).forEach(function (cat) {
+      catChips.appendChild(h("a", { class: "chip faction", href: "#/wiki", text: cat + " " + catCount[cat] }));
+    });
+    var wikiGrid = h("div", { class: "wiki-grid", style: "margin-top:14px" });
+    S.entries.slice(-4).reverse().forEach(function (e) {
+      var card = h("a", { class: "card wiki-card", href: "#/wiki/" + e.id });
+      if (e.category) card.appendChild(h("span", { class: "wiki-cat", text: e.category }));
+      card.appendChild(h("h3", { text: e.title || "未命名詞條" }));
+      if (e.summary) card.appendChild(h("p", { class: "summary", text: e.summary }));
+      wikiGrid.appendChild(card);
+    });
+    page.appendChild(sectionBlock("百科", S.entries.length + " 個詞條",
+      h("div", null, catChips, wikiGrid),
+      [h("a", { class: "btn small", href: "#/wiki", text: "全部詞條 →" })]));
+  }
+
+  /* 畫廊速覽 */
+  if (S.gallery.length) {
+    var gGrid = h("div", { class: "gallery-grid small" });
+    S.gallery.slice(-4).reverse().forEach(function (g) {
+      var cell = h("figure", { class: "gallery-cell" });
+      var frame = h("div", { class: "gallery-frame" });
+      frame.appendChild(h("img", { src: g.image, alt: g.title || "", loading: "lazy" }));
+      frame.addEventListener("click", function () { openLightbox(g); });
+      cell.appendChild(frame);
+      gGrid.appendChild(cell);
+    });
+    page.appendChild(sectionBlock("畫廊", S.gallery.length + " 張", gGrid,
+      [h("a", { class: "btn small", href: "#/gallery", text: "全部圖片 →" })]));
+  }
 
   /* 故事 */
   if (S.stories.length) {
@@ -1034,6 +1116,7 @@ function characterCard(c) {
   if (c.alias) meta.push("「" + c.alias + "」");
   if (c.role) meta.push(c.role);
   if (meta.length) front.appendChild(h("div", { class: "char-meta", text: meta.join(" · ") }));
+  if (c.faction) front.appendChild(h("span", { class: "chip faction card-faction", text: c.faction }));
 
   /* 背面 */
   var back = h("div", { class: "flip-face back" });
@@ -1134,6 +1217,15 @@ function characterPage(id) {
   if (c.faction) badges.appendChild(h("span", { class: "chip faction", text: c.faction }));
   csv(c.tags).forEach(function (t) { badges.appendChild(h("span", { class: "chip", text: t })); });
   info.appendChild(badges);
+
+  /* 一句台詞（取第一句） */
+  var firstQuote = String(c.quotes || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean)[0];
+  if (firstQuote) {
+    info.appendChild(h("blockquote", {
+      class: "char-line",
+      text: "「" + firstQuote.split("|")[0].trim() + "」"
+    }));
+  }
 
   var actions = h("div", { class: "hero-actions" });
   actions.appendChild(editButton("編輯人物資料", function () { editCharacter(id); }));
@@ -1362,24 +1454,44 @@ function characterPage(id) {
     }
 
     if (charTab === "trivia") {
-      if (c.trivia) tabBody.appendChild(richText(c.trivia));
-      else tabBody.appendChild(h("div", { class: "empty", text: editMode ? "還沒有軼事。點上方「編輯人物資料」補上。" : "還沒有軼事。" }));
+      if (canEdit() && editMode) {
+        var tTa = h("textarea", { class: "inline-ta", rows: "8", placeholder: "空行分段；支援 **粗體**、> 引用" });
+        tTa.value = c.trivia || "";
+        var tSave = h("button", { class: "btn small primary", text: "儲存軼事" });
+        tSave.addEventListener("click", function () {
+          mutate("updateCharacter", { id: c.id, trivia: tTa.value })
+            .then(function () { toast("已更新軼事"); return load(); })
+            .catch(reportErr);
+        });
+        tabBody.appendChild(tTa);
+        tabBody.appendChild(h("div", { class: "field-btns" }, tSave));
+      } else if (c.trivia) {
+        tabBody.appendChild(richText(c.trivia));
+      } else {
+        tabBody.appendChild(h("div", { class: "empty", text: editMode ? "還沒有軼事。進入編輯模式即可直接在這裡寫。" : "還沒有軼事。" }));
+      }
     }
 
     if (charTab === "quotes") {
-      var lines = String(c.quotes || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
-      if (!lines.length) {
-        tabBody.appendChild(h("div", { class: "empty", text: editMode ? "還沒有台詞。編輯人物 →「台詞」一行一句；想配音就寫「台詞 | media/xxx.mp3」。" : "還沒有台詞。" }));
-      } else {
-        var list = h("div", { class: "quote-list" });
-        lines.forEach(function (line) {
-          var parts = line.split("|");
-          var text = parts[0].trim();
-          var audioSrc = (parts[1] || "").trim();
-          var bubble = h("div", { class: "quote-bubble" });
-          bubble.appendChild(avatar(c, "quote-avatar"));
-          var body = h("div", { class: "quote-body" });
-          body.appendChild(h("p", { class: "quote-text", text: "「" + text + "」" }));
+      var qLines = String(c.quotes || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+      var editable = canEdit() && editMode;
+
+      function saveQ(next) {
+        mutate("updateCharacter", { id: c.id, quotes: next.join("\n") })
+          .then(function () { toast("已更新台詞"); return load(); })
+          .catch(reportErr);
+      }
+
+      function makeBubble(text, audioSrc, index) {
+        var bubble = h("div", { class: "quote-bubble" });
+        bubble.appendChild(avatar(c, "quote-avatar"));
+        var qbody = h("div", { class: "quote-body" });
+        bubble.appendChild(qbody);
+
+        function read() {
+          qbody.innerHTML = "";
+          if (text) qbody.appendChild(h("p", { class: "quote-text", text: "「" + text + "」" }));
+
           if (audioSrc) {
             var playBtn = h("button", { class: "quote-play", text: "▶ 播放" });
             playBtn.addEventListener("click", function () {
@@ -1394,12 +1506,84 @@ function characterPage(id) {
                 playBtn.textContent = "▶ 播放";
               });
             });
-            body.appendChild(playBtn);
+            qbody.appendChild(playBtn);
           }
-          bubble.appendChild(body);
-          list.appendChild(bubble);
+
+          if (editable) {
+            var acts = h("div", { class: "quote-acts" });
+            var bn = h("button", { class: "btn small", text: "✎ 修改" });
+            bn.addEventListener("click", edit);
+            acts.appendChild(bn);
+            if (typeof index === "number") {
+              var bd = h("button", { class: "btn small danger", text: "刪除" });
+              bd.addEventListener("click", function () {
+                var next = qLines.slice();
+                next.splice(index, 1);
+                saveQ(next);
+              });
+              acts.appendChild(bd);
+            }
+            qbody.appendChild(acts);
+          }
+        }
+
+        function edit() {
+          qbody.innerHTML = "";
+          var ta = h("textarea", { class: "quote-input", rows: "2", placeholder: "台詞內容" });
+          ta.value = text;
+          var ai = h("input", { type: "text", class: "quote-audio", placeholder: "配音檔（可留空）：media/xxx.mp3" });
+          ai.value = audioSrc;
+          qbody.appendChild(ta);
+          qbody.appendChild(ai);
+
+          var row = h("div", { class: "quote-acts" });
+          var ok = h("button", { class: "btn small primary", text: "儲存" });
+          ok.addEventListener("click", function () {
+            var nt = String(ta.value || "").trim();
+            var na = String(ai.value || "").trim();
+            if (!nt) { toast("台詞不能留空", true); ta.focus(); return; }
+            var line = na ? (nt + " | " + na) : nt;
+            var next = qLines.slice();
+            if (typeof index === "number") next[index] = line;
+            else next.push(line);
+            saveQ(next);
+          });
+          var cancel = h("button", { class: "btn small", text: "取消" });
+          cancel.addEventListener("click", function () {
+            if (typeof index === "number") read();
+            else bubble.remove();
+          });
+          row.appendChild(ok);
+          row.appendChild(cancel);
+          qbody.appendChild(row);
+          ta.focus();
+        }
+
+        return { node: bubble, edit: edit, read: read };
+      }
+
+      var qList = h("div", { class: "quote-list" });
+      qLines.forEach(function (line, qi) {
+        var parts = line.split("|");
+        var bub = makeBubble(parts[0].trim(), (parts[1] || "").trim(), qi);
+        bub.read();
+        qList.appendChild(bub.node);
+      });
+
+      if (!qLines.length && !editable) {
+        tabBody.appendChild(h("div", { class: "empty", text: "還沒有台詞。" }));
+      } else {
+        tabBody.appendChild(qList);
+      }
+
+      if (editable) {
+        var addQ = h("button", { class: "btn small quote-add", text: "＋ 新增台詞" });
+        addQ.addEventListener("click", function () {
+          var bub = makeBubble("", "", undefined);
+          bub.edit();
+          qList.appendChild(bub.node);
         });
-        tabBody.appendChild(list);
+        tabBody.appendChild(h("div", { class: "field-btns" }, addQ));
       }
     }
 
@@ -1636,7 +1820,31 @@ function graphPage() {
     }));
   }
 
+  /* 縮放工具列（手機預設放大，可左右滑動） */
+  var gz = window.innerWidth < 700 ? 1.7 : 1;
   var wrap = h("div", { class: "graph-wrap" });
+  var zoomVal = h("span", { class: "zoom-val", text: Math.round(gz * 100) + "%" });
+
+  function applyZoom() {
+    wrap.style.setProperty("--gz", String(gz));
+    zoomVal.textContent = Math.round(gz * 100) + "%";
+  }
+
+  var gtools = h("div", { class: "graph-tools" });
+  var zOut = h("button", { class: "btn small", text: "−", title: "縮小" });
+  zOut.addEventListener("click", function () { gz = clamp(gz - 0.2, 1, 3); applyZoom(); });
+  var zIn = h("button", { class: "btn small", text: "＋", title: "放大" });
+  zIn.addEventListener("click", function () { gz = clamp(gz + 0.2, 1, 3); applyZoom(); });
+  var zFit = h("button", { class: "btn small", text: "適合視窗" });
+  zFit.addEventListener("click", function () { gz = 1; applyZoom(); });
+  gtools.appendChild(zOut);
+  gtools.appendChild(zoomVal);
+  gtools.appendChild(zIn);
+  gtools.appendChild(zFit);
+  gtools.appendChild(h("span", { class: "hint", text: "放大後可左右滑動" }));
+  page.appendChild(gtools);
+
+  applyZoom();
   page.appendChild(wrap);
   mountGraph(wrap);
 
@@ -2154,10 +2362,21 @@ function timelinePage() {
     /* 綁定在這個節點上的故事與圖片 */
     var boundStories = S.stories.filter(function (s) { return s.eventId === ev.id; });
     var boundGallery = S.gallery.filter(function (g) { return g.eventId === ev.id; });
+
+    /* 小插圖：優先取這個節點綁定的第一張圖 */
+    if (boundGallery.length && boundGallery[0].image) {
+      var fig = h("figure", { class: "tl-illus" });
+      var gi = h("img", { src: boundGallery[0].image, alt: boundGallery[0].title || "", loading: "lazy" });
+      gi.addEventListener("click", function () { openLightbox(boundGallery[0]); });
+      fig.appendChild(gi);
+      if (boundGallery[0].title) fig.appendChild(h("figcaption", { text: boundGallery[0].title }));
+      body.appendChild(fig);
+    }
+
     if (boundStories.length || boundGallery.length) {
       var links = h("div", { class: "tl-links" });
       boundStories.forEach(function (s) {
-        links.appendChild(h("a", { class: "tl-link", href: "#/stories/" + s.id, text: "▤ " + (s.title || "未命名故事") }));
+        links.appendChild(h("a", { class: "tl-link", href: "#/stories/" + s.id + "/0", text: "▤ " + (s.title || "未命名故事") }));
       });
       boundGallery.forEach(function (g) {
         var thumb = h("a", { class: "tl-thumb", href: "javascript:void(0)", title: g.title || g.caption || "" });
@@ -4326,8 +4545,247 @@ function openOutfitDetail(o) {
   host.appendChild(overlay);
 }
 
+/* ── 首屏氛圍：倒轉時鐘 + 碎片粒子 ───────── */
+var atmosRaf = null;
+var atmosRaf2 = null;
+var atmosResize = null;
+
+var CLOCK_SPEEDS = { sec: 12, min: 48, hour: 480, dash: 320 };
+
+function stopAtmosphere() {
+  if (atmosRaf) { cancelAnimationFrame(atmosRaf); atmosRaf = null; }
+  if (atmosRaf2) { cancelAnimationFrame(atmosRaf2); atmosRaf2 = null; }
+}
+
+function startClockSpin(svg) {
+  var nodes = {};
+  Object.keys(CLOCK_SPEEDS).forEach(function (role) {
+    nodes[role] = svg.querySelector('[data-role="' + role + '"]');
+  });
+
+  function frame(ts) {
+    if (!svg.isConnected) { atmosRaf2 = null; return; }
+    var t = ts / 1000;
+    Object.keys(CLOCK_SPEEDS).forEach(function (role) {
+      var node = nodes[role];
+      if (!node) return;
+      var deg = (-360 * t / CLOCK_SPEEDS[role]) % 360;
+      node.setAttribute("transform", "rotate(" + deg.toFixed(2) + " 200 200)");
+    });
+    atmosRaf2 = requestAnimationFrame(frame);
+  }
+  atmosRaf2 = requestAnimationFrame(frame);
+}
+
+function buildClockFace() {
+  var reduced = false;
+  try { reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* 忽略 */ }
+
+  var svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("class", "clock");
+  svg.setAttribute("viewBox", "0 0 400 400");
+  svg.setAttribute("aria-hidden", "true");
+
+  /* 指針由 JS 逐格設定 transform，不依賴 SMIL / CSS transform-origin */
+  function tag(node, role) {
+    node.setAttribute("data-role", role);
+    return node;
+  }
+
+  function circle(r, cls) {
+    var c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", "200");
+    c.setAttribute("cy", "200");
+    c.setAttribute("r", String(r));
+    c.setAttribute("class", cls);
+    return c;
+  }
+
+  svg.appendChild(circle(160, "cl-face"));
+  svg.appendChild(circle(172, "cl-ring"));
+  svg.appendChild(tag(circle(152, "cl-ring-soft"), "dash"));
+
+  for (var i = 0; i < 12; i++) {
+    var ang = i * Math.PI / 6;
+    var ln = document.createElementNS(NS, "line");
+    ln.setAttribute("x1", (200 + Math.sin(ang) * 162).toFixed(1));
+    ln.setAttribute("y1", (200 - Math.cos(ang) * 162).toFixed(1));
+    ln.setAttribute("x2", (200 + Math.sin(ang) * 172).toFixed(1));
+    ln.setAttribute("y2", (200 - Math.cos(ang) * 172).toFixed(1));
+    ln.setAttribute("class", "cl-tick");
+    svg.appendChild(ln);
+  }
+
+  function hand(len, width, cls, role) {
+    var g = document.createElementNS(NS, "g");
+    var l = document.createElementNS(NS, "line");
+    l.setAttribute("x1", "200");
+    l.setAttribute("y1", "214");
+    l.setAttribute("x2", "200");
+    l.setAttribute("y2", String(200 - len));
+    l.setAttribute("class", cls);
+    l.setAttribute("stroke-width", String(width));
+    g.appendChild(l);
+    return tag(g, role);
+  }
+
+  /* 三支指針都逆時針倒轉：秒 12 秒一圈、分 48 秒、時 480 秒 */
+  svg.appendChild(hand(98, 7.5, "cl-line-hour", "hour"));
+  svg.appendChild(hand(146, 4.2, "cl-line-min", "min"));
+  svg.appendChild(hand(166, 1.8, "cl-line-sec", "sec"));
+
+  svg.appendChild(circle(15, "cl-halo"));
+  svg.appendChild(circle(6.5, "cl-center"));
+
+  return svg;
+}
+
+function startShards(canvas) {
+  var reduced = false;
+  try { reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* 忽略 */ }
+
+  var ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var parts = [], W = 1, H = 1, last = 0;
+
+  function spawn(anyY) {
+    return {
+      x: Math.random() * W,
+      y: anyY ? Math.random() * H : -24,
+      w: 2 + Math.random() * 5,
+      h: 3 + Math.random() * 9,
+      vx: -5 + Math.random() * 10,
+      vy: 7 + Math.random() * 15,
+      rot: Math.random() * Math.PI,
+      vr: -0.3 + Math.random() * 0.6,
+      a: 0.1 + Math.random() * 0.26,
+      warm: Math.random() < 0.38
+    };
+  }
+
+  function resize() {
+    var r = canvas.getBoundingClientRect();
+    W = Math.max(1, Math.round(r.width));
+    H = Math.max(1, Math.round(r.height));
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var target = Math.round(Math.min(44, Math.max(12, W / 26)));
+    while (parts.length < target) parts.push(spawn(true));
+    parts.length = target;
+  }
+
+  function frame(ts) {
+    if (!canvas.isConnected) { stopAtmosphere(); return; }
+    var dt = last ? Math.min(0.05, (ts - last) / 1000) : 0.016;
+    last = ts;
+
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      if (p.y > H + 26) { p.y = -26; p.x = Math.random() * W; }
+      if (p.x < -26) p.x = W + 26;
+      else if (p.x > W + 26) p.x = -26;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.warm
+        ? "rgba(207,133,80," + p.a.toFixed(3) + ")"
+        : "rgba(150,200,220," + p.a.toFixed(3) + ")";
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    atmosRaf = requestAnimationFrame(frame);
+  }
+
+  resize();
+  if (atmosResize) window.removeEventListener("resize", atmosResize);
+  atmosResize = resize;
+  window.addEventListener("resize", atmosResize);
+
+  atmosRaf = requestAnimationFrame(frame);
+}
+
+function openingAtmosphere() {
+  stopAtmosphere();
+  var wrap = h("div", { class: "atmos", "aria-hidden": "true" });
+
+  var clockSvg = buildClockFace();
+  wrap.appendChild(clockSvg);
+
+  var canvas = h("canvas", { class: "shards" });
+  wrap.appendChild(canvas);
+
+  requestAnimationFrame(function () {
+    if (clockSvg.isConnected) startClockSpin(clockSvg);
+    if (canvas.isConnected) startShards(canvas);
+  });
+  return wrap;
+}
+
+/* ── 時間綫展開狀態 ───────────────────── */
+var openEvents = {};
+
+function teaserText(t) {
+  var s = String(t || "").replace(/[*>#`_]/g, "").replace(/\s+/g, " ").trim();
+  if (!s) return "（還沒有內容，點擊展開）";
+  return s.length > 46 ? s.slice(0, 46) + "…" : s;
+}
+
+/* ── 主題：淺色 / 深色 ─────────────────── */
+var THEME_KEY = "oc-world:theme";
+
+function systemTheme() {
+  try { return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }
+  catch (e) { return "light"; }
+}
+
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  document.documentElement.style.colorScheme = t;
+  var btn = el("themeBtn");
+  if (btn) btn.textContent = t === "dark" ? "☾" : "◐";
+}
+
+function currentTheme() {
+  return document.documentElement.getAttribute("data-theme") || systemTheme();
+}
+
+function initTheme() {
+  var saved = null;
+  try { saved = localStorage.getItem(THEME_KEY); } catch (e) { /* 忽略 */ }
+  applyTheme((saved === "dark" || saved === "light") ? saved : systemTheme());
+
+  var btn = el("themeBtn");
+  if (btn) {
+    btn.addEventListener("click", function () {
+      var next = currentTheme() === "dark" ? "light" : "dark";
+      applyTheme(next);
+      try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* 忽略 */ }
+    });
+  }
+
+  try {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) {
+      mq.addEventListener("change", function () {
+        var keep = null;
+        try { keep = localStorage.getItem(THEME_KEY); } catch (e) { /* 忽略 */ }
+        if (!keep) applyTheme(systemTheme());
+      });
+    }
+  } catch (e) { /* 忽略 */ }
+}
+
 /* ── 啟動 ─────────────────────────────────── */
 function init() {
+  initTheme();
   initUpload();
   /* 在聊天卡片裡不建立音樂播放器，避免一出現就自動出聲 */
   if (!isChatCard()) initMusicDock();
@@ -4345,7 +4803,8 @@ function init() {
     toast(editMode ? "編輯模式：可以新增與修改內容" : "已離開編輯模式");
   });
 
-  el("ghBtn").addEventListener("click", openGhSettings);
+  /* 雲端寫入已停用，清掉舊的 token 設定 */
+  try { localStorage.removeItem(GH_KEY); } catch (e) { /* 忽略 */ }
 
   window.addEventListener("hashchange", function () {
     render();
