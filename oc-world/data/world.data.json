@@ -1,0 +1,932 @@
+{
+  "$manifest": {
+    "version": 1,
+    "desc": "OC 世界觀資料：world（世界設定）、characters（人物）、relations（人物關係）、stories（背景故事）、places（地圖標點）、events（時間綫節點）、gallery（畫廊）、map（地圖底圖）",
+    "queries": {
+      "listCharacters": {
+        "desc": "查看人物，可按陣營過濾並排序",
+        "path": "characters",
+        "identity": "id",
+        "params": {
+          "faction": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "field"
+          },
+          "dir": {
+            "type": "enum",
+            "values": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        "defaultLimit": 50
+      },
+      "getCharacter": {
+        "desc": "按 ID 取得單個人物",
+        "path": "characters",
+        "identity": "id",
+        "defaultLimit": 1
+      },
+      "listRelations": {
+        "desc": "查看人物關係，可按起點 fromId、終點 toId 或類型過濾",
+        "path": "relations",
+        "identity": "id",
+        "params": {
+          "fromId": {
+            "type": "string"
+          },
+          "toId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "enum",
+            "values": [
+              "親屬",
+              "摯友",
+              "戀人",
+              "師徒",
+              "同盟",
+              "敵對",
+              "隸屬",
+              "其他"
+            ]
+          },
+          "sort": {
+            "type": "field"
+          },
+          "dir": {
+            "type": "enum",
+            "values": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        "defaultLimit": 100
+      },
+      "listStories": {
+        "desc": "查看背景故事列表",
+        "path": "stories",
+        "identity": "id",
+        "params": {
+          "sort": {
+            "type": "field"
+          },
+          "dir": {
+            "type": "enum",
+            "values": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        "defaultLimit": 50
+      },
+      "getStory": {
+        "desc": "按 ID 取得單篇故事全文",
+        "path": "stories",
+        "identity": "id",
+        "defaultLimit": 1
+      },
+      "listPlaces": {
+        "desc": "查看地圖上的地點標點",
+        "path": "places",
+        "identity": "id",
+        "params": {
+          "category": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "field"
+          },
+          "dir": {
+            "type": "enum",
+            "values": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        "defaultLimit": 100
+      },
+      "listEvents": {
+        "desc": "按順序查看時間綫節點",
+        "path": "events",
+        "identity": "id",
+        "params": {
+          "sort": {
+            "type": "field"
+          },
+          "dir": {
+            "type": "enum",
+            "values": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        "defaultLimit": 100
+      },
+      "listGallery": {
+        "desc": "查看畫廊圖片",
+        "path": "gallery",
+        "identity": "id",
+        "params": {
+          "sort": {
+            "type": "field"
+          },
+          "dir": {
+            "type": "enum",
+            "values": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        "defaultLimit": 100
+      }
+    },
+    "mutations": {
+      "updateWorld": {
+        "desc": "修改世界設定與主色，只傳要改的欄位",
+        "op": "set",
+        "path": "world",
+        "fields": {
+          "name": {
+            "type": "string"
+          },
+          "tagline": {
+            "type": "string"
+          },
+          "intro": {
+            "type": "string"
+          },
+          "era": {
+            "type": "string"
+          },
+          "accent": {
+            "type": "string"
+          },
+          "footer": {
+            "type": "string"
+          }
+        }
+      },
+      "updateMap": {
+        "desc": "修改地圖底圖與說明",
+        "op": "set",
+        "path": "map",
+        "fields": {
+          "image": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "addCharacter": {
+        "desc": "新增人物",
+        "op": "append",
+        "path": "characters",
+        "fields": {
+          "name": {
+            "type": "string",
+            "required": true
+          },
+          "alias": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "faction": {
+            "type": "string"
+          },
+          "age": {
+            "type": "string"
+          },
+          "birthday": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "bloodType": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "story": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "hair": {
+            "type": "string"
+          },
+          "eyes": {
+            "type": "string"
+          },
+          "outfit": {
+            "type": "string"
+          },
+          "habit": {
+            "type": "string"
+          },
+          "keepsake": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "transformName": {
+            "type": "string"
+          },
+          "transformLook": {
+            "type": "string"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "abilityLimit": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "string"
+          },
+          "weakPoint": {
+            "type": "string"
+          },
+          "personality": {
+            "type": "string"
+          },
+          "strengths": {
+            "type": "string"
+          },
+          "flaw": {
+            "type": "string"
+          },
+          "petPeeve": {
+            "type": "string"
+          },
+          "fear": {
+            "type": "string"
+          },
+          "coping": {
+            "type": "string"
+          },
+          "firstImpression": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "pastLife": {
+            "type": "string"
+          },
+          "catchphrase": {
+            "type": "string"
+          },
+          "want": {
+            "type": "string"
+          },
+          "loseFear": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "auto": {
+          "id": "uuid",
+          "createdAt": "nowIso"
+        }
+      },
+      "updateCharacter": {
+        "desc": "修改人物，需傳 id",
+        "op": "update",
+        "path": "characters",
+        "match": "id",
+        "fields": {
+          "name": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "faction": {
+            "type": "string"
+          },
+          "age": {
+            "type": "string"
+          },
+          "birthday": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "bloodType": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "story": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "hair": {
+            "type": "string"
+          },
+          "eyes": {
+            "type": "string"
+          },
+          "outfit": {
+            "type": "string"
+          },
+          "habit": {
+            "type": "string"
+          },
+          "keepsake": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "transformName": {
+            "type": "string"
+          },
+          "transformLook": {
+            "type": "string"
+          },
+          "ability": {
+            "type": "string"
+          },
+          "abilityLimit": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "string"
+          },
+          "weakPoint": {
+            "type": "string"
+          },
+          "personality": {
+            "type": "string"
+          },
+          "strengths": {
+            "type": "string"
+          },
+          "flaw": {
+            "type": "string"
+          },
+          "petPeeve": {
+            "type": "string"
+          },
+          "fear": {
+            "type": "string"
+          },
+          "coping": {
+            "type": "string"
+          },
+          "firstImpression": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "pastLife": {
+            "type": "string"
+          },
+          "catchphrase": {
+            "type": "string"
+          },
+          "want": {
+            "type": "string"
+          },
+          "loseFear": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          }
+        }
+      },
+      "removeCharacter": {
+        "desc": "刪除人物（其相關關係需先刪除）",
+        "op": "remove",
+        "path": "characters",
+        "match": "id"
+      },
+      "addRelation": {
+        "desc": "新增人物關係，fromId 為起點人物、toId 為終點人物",
+        "op": "append",
+        "path": "relations",
+        "fields": {
+          "fromId": {
+            "type": "string",
+            "required": true
+          },
+          "toId": {
+            "type": "string",
+            "required": true
+          },
+          "type": {
+            "type": "enum",
+            "values": [
+              "親屬",
+              "摯友",
+              "戀人",
+              "師徒",
+              "同盟",
+              "敵對",
+              "隸屬",
+              "其他"
+            ],
+            "required": true
+          },
+          "note": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "auto": {
+          "id": "uuid",
+          "createdAt": "nowIso"
+        }
+      },
+      "updateRelation": {
+        "desc": "修改人物關係，需傳 id",
+        "op": "update",
+        "path": "relations",
+        "match": "id",
+        "fields": {
+          "fromId": {
+            "type": "string"
+          },
+          "toId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "enum",
+            "values": [
+              "親屬",
+              "摯友",
+              "戀人",
+              "師徒",
+              "同盟",
+              "敵對",
+              "隸屬",
+              "其他"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          }
+        }
+      },
+      "removeRelation": {
+        "desc": "刪除人物關係，需傳 id",
+        "op": "remove",
+        "path": "relations",
+        "match": "id"
+      },
+      "addStory": {
+        "desc": "新增背景故事，characters 為涉及人物 id 的逗號分隔字串",
+        "op": "append",
+        "path": "stories",
+        "fields": {
+          "eventId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "required": true
+          },
+          "body": {
+            "type": "string"
+          },
+          "characters": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "auto": {
+          "id": "uuid",
+          "createdAt": "nowIso"
+        }
+      },
+      "updateStory": {
+        "desc": "修改背景故事，需傳 id",
+        "op": "update",
+        "path": "stories",
+        "match": "id",
+        "fields": {
+          "eventId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "characters": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          }
+        }
+      },
+      "removeStory": {
+        "desc": "刪除背景故事，需傳 id",
+        "op": "remove",
+        "path": "stories",
+        "match": "id"
+      },
+      "addPlace": {
+        "desc": "在地圖上新增標點，x/y 為 0–100 的百分比座標",
+        "op": "append",
+        "path": "places",
+        "fields": {
+          "name": {
+            "type": "string",
+            "required": true
+          },
+          "category": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "characters": {
+            "type": "string"
+          },
+          "x": {
+            "type": "integer",
+            "default": 50
+          },
+          "y": {
+            "type": "integer",
+            "default": 50
+          },
+          "order": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "auto": {
+          "id": "uuid",
+          "createdAt": "nowIso"
+        }
+      },
+      "updatePlace": {
+        "desc": "修改地點標點（含拖動後的座標），需傳 id",
+        "op": "update",
+        "path": "places",
+        "match": "id",
+        "fields": {
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "characters": {
+            "type": "string"
+          },
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "order": {
+            "type": "integer"
+          }
+        }
+      },
+      "removePlace": {
+        "desc": "刪除地點標點，需傳 id",
+        "op": "remove",
+        "path": "places",
+        "match": "id"
+      },
+      "addEvent": {
+        "desc": "新增時間綫節點，order 決定先後",
+        "op": "append",
+        "path": "events",
+        "fields": {
+          "title": {
+            "type": "string",
+            "required": true
+          },
+          "date": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "characters": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "auto": {
+          "id": "uuid",
+          "createdAt": "nowIso"
+        }
+      },
+      "updateEvent": {
+        "desc": "修改時間綫節點，需傳 id",
+        "op": "update",
+        "path": "events",
+        "match": "id",
+        "fields": {
+          "title": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "characters": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          }
+        }
+      },
+      "removeEvent": {
+        "desc": "刪除時間綫節點，需傳 id",
+        "op": "remove",
+        "path": "events",
+        "match": "id"
+      },
+      "addGallery": {
+        "desc": "新增畫廊圖片，image 為 media/ 路徑或外部網址",
+        "op": "append",
+        "path": "gallery",
+        "fields": {
+          "eventId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string",
+            "required": true
+          },
+          "caption": {
+            "type": "string"
+          },
+          "characters": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "auto": {
+          "id": "uuid",
+          "createdAt": "nowIso"
+        }
+      },
+      "updateGallery": {
+        "desc": "修改畫廊圖片資料，需傳 id",
+        "op": "update",
+        "path": "gallery",
+        "match": "id",
+        "fields": {
+          "eventId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "characters": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          }
+        }
+      },
+      "removeGallery": {
+        "desc": "刪除畫廊圖片，需傳 id",
+        "op": "remove",
+        "path": "gallery",
+        "match": "id"
+      }
+    }
+  },
+  "world": {
+    "name": "重生之什麼叫我們回來考DSE也要拯救世界",
+    "tagline": "時間倒流回 2017 年。這一次，考卷和怪物一起重來。",
+    "intro": "764 年前，七個人的勇者小隊拼盡全力，把牠逼到幾乎死去。牠沒有死——力量散成七枚碎片，流落人間，七個人全部戰死。\n\n那七個人跟今天的人沒有任何關係。碎片只是落在「被命運選定」的人身上：沒有血脈，沒有轉世，沒有誰欠誰。\n\n上一輪，持有碎片的人握不住那股力量。時間倒流，世界重回 2017 年。\n\n沒有人知道為什麼停在這裡。不是轉折點，不是宿命，不是誰的安排。就是巧合。\n\n記得的人不多，而且記得的不完整：記得某種感覺，記不清細節。其他人什麼都不知道。\n\n敵人是一個群體，藏在「老師」這個身分裡面。他們替牠做兩件事：殺掉魔法少女取回力量；以及用「催化機器」扭曲物件——到後來，連人也能催化。",
+    "era": "2017（中四）→ 2020（DSE）→ 2024 → 倒流回 2017",
+    "accent": "",
+    "footer": ""
+  },
+  "map": {
+    "image": "media/hk-map-active.svg",
+    "note": ""
+  },
+  "characters": [
+    {
+      "id": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
+      "name": "梁釔錂",
+      "alias": "Vivian",
+      "role": "主角",
+      "faction": "魔法少女",
+      "age": "重生前 24／重生後 16",
+      "birthday": "4月22日",
+      "height": "170cm",
+      "bloodType": "A",
+      "tags": "記憶模糊,美術生,耳機,怕熱,避世",
+      "summary": "不太愛講話的命苦美術生。",
+      "story": "重生前，梁釔錂是設計師。離職不是為了理想，是因為職場霸凌——辭職之後那段空窗期，她把時間花在經營一個網絡賬號上。\n\n然後世界倒流回 2017 年，回到中四。\n\n問題是她記得的不完整。她記得被霸凌過，記得那種感覺——但記不清到底是什麼事、是誰、為什麼。記憶像被水泡過的紙：字還在，形狀沒了。\n\n她知道有事會發生，但不知道會發生什麼。這比完全不知道更難受。\n\n變身之後她叫「白雨」，形態的靈感是冰雹：頭髮轉成水藍，穿上新中式與洛麗塔混成的裙子。代價是過度嗜睡——打得越多，睡得越久。\n\n她怕熱、怕噪音，所以耳機幾乎不離身。她不喜歡被反覆提起錯處，也不喜歡被說教。\n\n還有一件她從沒跟任何人說過的事：她很討厭被說「獨立」。",
+      "image": "",
+      "hair": "變身前黑色長髮；變身後水藍色",
+      "eyes": "橙色",
+      "outfit": "寬鬆衛衣",
+      "habit": "摸劉海",
+      "keepsake": "耳機",
+      "color": "藍",
+      "transformName": "白雨（冰雹）",
+      "transformLook": "新中式＋洛麗塔裙子",
+      "ability": "",
+      "abilityLimit": "",
+      "cost": "過度嗜睡",
+      "weakPoint": "怕熱",
+      "personality": "獨立、避世、孤單",
+      "strengths": "畫畫",
+      "flaw": "固執",
+      "petPeeve": "不希望反覆被提起錯處和說教",
+      "fear": "噪音",
+      "coping": "吃",
+      "firstImpression": "陰暗批",
+      "family": "父親每月給錢，不溝通；母親長期在外出差，不關心她的狀況。",
+      "pastLife": "DSE 成績剛好考上大學。之後當設計師，被職場霸凌後辭職，在空窗期經營網絡賬號。24 歲那年，世界倒流。",
+      "order": 0,
+      "createdAt": "2026-10-28T08:15:24.340Z"
+    },
+    {
+      "name": "凌栺林",
+      "alias": "Ling Ling",
+      "role": "主角",
+      "faction": "魔法少女",
+      "age": "外表 16／實際 24",
+      "birthday": "6月21日",
+      "height": "168cm",
+      "bloodType": "AB",
+      "tags": "小太陽,神經質,死線戰士,記者,失眠",
+      "summary": "外表 16、實際 24 的實習記者，一開口就破功的那種文靜。",
+      "story": "凌栺林，朋友叫她 Ling Ling。外表 16，實際 24——這個落差她自己覺得很好笑，但笑完又有點想哭。\n\nDSE 她考到 5*43A55，入讀香城大學新聞系，四年順利畢業，進了一家本地知名新聞媒體當實習記者。她本來要把這份工作做成一生的事。\n\n然後世界倒流回中四。\n\n她是那種一開口就破功的人：第一眼看很文靜，認識三分鐘之後就開始「我草」。大大咧咧、有點小聰明、死線戰士——聽起來很適合當記者。但內裡她容易內耗、容易多想、敏感得很，情緒管理能力強，是因為她不得不強。\n\n變身之後她叫「紫金蛇」：紫色水母頭，長髮及腰，一身紫色中式洛麗塔。代價是失眠——變身越多，越睡不著。\n\n雨傘幾乎不離手。她害怕的不是怪物，是被親朋好友離棄。壓力大的時候，她會坐著摳臉上的油脂粒，摳到出血才停。",
+      "hair": "棕色長髮，很容易亂卷的髮質",
+      "outfit": "偏中性、隨意，以舒適為主",
+      "keepsake": "雨傘",
+      "color": "紫",
+      "transformName": "紫金蛇",
+      "transformLook": "紫色水母頭，長髮及腰，一身紫色中式洛麗塔",
+      "cost": "失眠",
+      "personality": "大大咧咧、小太陽、神經質、容易內耗、容易多想、死線戰士、有點小聰明、情緒管理能力強、有同理心、執拗、敏感、活潑、獨立",
+      "fear": "被親朋好友離棄",
+      "coping": "摳油脂粒",
+      "firstImpression": "很文靜的人（其實一開口就破功）",
+      "family": "父母，和一位曾就讀香港醫科大的哥哥。",
+      "pastLife": "DSE 考到 5*43A55，入讀香城大學新聞系，四年順利畢業，進本地知名新聞媒體當實習記者。24 歲那年，世界倒流，她回到中四。",
+      "catchphrase": "我草",
+      "order": 1,
+      "id": "18585cc1-d3f9-4f1c-a76b-674c301f14dd",
+      "createdAt": "2026-10-28T09:39:44.508Z"
+    }
+  ],
+  "relations": [
+    {
+      "fromId": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
+      "toId": "18585cc1-d3f9-4f1c-a76b-674c301f14dd",
+      "type": "摯友",
+      "note": "",
+      "order": 0,
+      "id": "f48ccf05-cefe-47bb-a73d-e5d3df12d8ce",
+      "createdAt": "2026-10-28T10:16:30.992Z"
+    }
+  ],
+  "stories": [],
+  "places": [],
+  "events": [
+    {
+      "id": "ev-rewind",
+      "title": "所有人同時握不住力量",
+      "date": "倒流的那一刻",
+      "body": "所有持有碎片的人在這一刻同時握不住力量。時間倒退，世界回到七年前。\n\n沒有人知道為什麼是這個年份。不是轉折點，不是宿命，不是誰的安排。",
+      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
+      "order": 4,
+      "createdAt": "2026-10-28T09:00:00.000Z"
+    },
+    {
+      "title": "七人戰死，力量散落人間",
+      "date": "764 年前",
+      "body": "七個人的勇者小隊拼盡全力，把牠逼到幾乎死去。\n\n牠沒有死。力量被打散成七枚碎片，流落人間；七個人全部戰死。\n\n**那七個人跟今天的事情沒有關係。** 沒有轉世，沒有血脈，沒有誰欠誰。",
+      "order": 0,
+      "id": "9b8ffbc8-dd68-4bbe-ba07-120b0c065d68",
+      "createdAt": "2026-10-28T09:35:01.755Z"
+    },
+    {
+      "title": "考完 DSE，過普通日子",
+      "date": "2020 · DSE",
+      "body": "她考上大學。成績剛好，不算好也不算差。",
+      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
+      "order": 1,
+      "id": "b1ba6c1b-6369-4e77-a81a-c31637674afd",
+      "createdAt": "2026-10-28T09:35:03.613Z"
+    },
+    {
+      "title": "設計師、霸凌、辭職",
+      "date": "2024",
+      "body": "她當上設計師。\n\n然後是職場霸凌。她離職。空窗期裡，她把時間花在經營一個網絡賬號上。\n\n她 24 歲。",
+      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
+      "order": 2,
+      "id": "fef63fdd-e373-485e-bfd1-a38383ca55f9",
+      "createdAt": "2026-10-28T09:35:06.567Z"
+    },
+    {
+      "title": "回到中四（現在）",
+      "date": "2017 · 中四",
+      "body": "時間回到 2017 年，中四那年。\n\n她們重新坐進課室，重新面對三年後的 DSE。\n\n身邊的人一個都不記得。記得的人，只記得一部分。",
+      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4,18585cc1-d3f9-4f1c-a76b-674c301f14dd",
+      "order": 3,
+      "id": "5e73cda2-5ff0-4de6-9125-b0edc3050383",
+      "createdAt": "2026-10-28T09:35:08.825Z"
+    }
+  ],
+  "gallery": []
+}

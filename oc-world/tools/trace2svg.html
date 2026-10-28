@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>圖片 → 向量地圖（自動描邊）</title>
+<style>
+  :root{
+    --accent:#2f7f9e;--warm:#d9762f;--stamp:#b4342a;
+    --ink:#14202a;--ink-soft:#3d4f5c;--muted:#7b8b96;
+    --line:#d9e1e6;--line-soft:#eaf0f2;--paper:#f3f6f7;--card:#fff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --serif:"Songti TC","Noto Serif TC",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);overflow-y:auto;padding-bottom:3rem;
+    font:16px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px}
+  h1{font-family:var(--serif);font-size:25px;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  h2{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+     margin:24px 0 10px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .drop{border:1.5px dashed var(--line);border-radius:10px;background:#fff;
+    padding:28px 18px;text-align:center;cursor:pointer;transition:.18s}
+  .drop:hover,.drop.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 4%,#fff)}
+  .drop b{display:block;font-size:14px;margin-bottom:4px}
+  .drop span{font-size:12.5px;color:var(--muted)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+  button{font:inherit;font-size:13px;font-weight:600;padding:7px 15px;border-radius:5px;
+    border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:.15s}
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{filter:brightness(1.08);color:#fff}
+  button.warm{border-color:color-mix(in srgb,var(--warm) 50%,#fff);color:var(--warm)}
+  button:disabled{opacity:.45;cursor:default}
+  .ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;
+       background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+  .ctl label{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.03em;margin-bottom:3px}
+  .ctl input[type=range]{width:100%;accent-color:var(--accent)}
+  .ctl .val{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+  .swatch{width:26px;height:26px;border-radius:5px;border:1px solid var(--line);display:inline-block;vertical-align:middle}
+  .panes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  @media (max-width:700px){.panes{grid-template-columns:1fr}}
+  .pane{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px;overflow:hidden}
+  .pane h3{margin:2px 6px 6px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .pane canvas,.pane svg{width:100%;height:auto;display:block;border-radius:4px;background:#e4eff5}
+  .log{font-family:var(--mono);font-size:11.5px;color:var(--muted);background:#fff;
+    border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin-top:12px;
+    white-space:pre-wrap;line-height:1.7;max-height:200px;overflow:auto}
+  .log b{color:var(--ink)}
+  .log .err{color:var(--stamp)}
+  .hint{margin-top:18px;padding:13px 15px;border-left:3px solid var(--warm);
+    background:color-mix(in srgb,var(--warm) 5%,#fff);border-radius:0 6px 6px 0;
+    font-size:12.5px;color:var(--ink-soft);line-height:1.85}
+  .hint b{color:var(--ink)}
+  .hint code{font-family:var(--mono);font-size:11.5px;background:var(--line-soft);padding:1px 5px;border-radius:3px}
+  .num{font-family:var(--mono);font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>圖片 → 向量地圖</h1>
+  <p class="sub">上傳任何香港地圖截圖（OSM、政府地圖、掃描圖），自動描出陸地輪廓並轉成本站風格 SVG。</p>
+
+  <h2>① 上傳圖片</h2>
+  <div class="drop" id="drop">
+    <b>拖進一張地圖圖檔，或點這裡選檔</b>
+    <span>PNG / JPG / WEBP。建議先裁成香港範圍、放大到 1000px 以上</span>
+    <input type="file" id="file" accept="image/*" hidden>
+  </div>
+
+  <h2>② 調整描邊參數</h2>
+  <div class="ctl">
+    <div>
+      <label>海水顏色（自動偵測，可改）</label>
+      <input type="color" id="seaColor" value="#aad3df" style="width:44px;height:26px;border:1px solid var(--line);border-radius:5px;background:#fff">
+      <span class="swatch" id="swPreview"></span>
+      <button id="autoSea" style="padding:3px 9px;font-size:11.5px;margin-left:6px">重新偵測</button>
+    </div>
+    <div>
+      <label>色彩容差 <span class="val" id="tolVal">70</span></label>
+      <input type="range" id="tol" min="10" max="180" value="70">
+    </div>
+    <div>
+      <label>簡化程度 <span class="val" id="simVal">1.6</span>（越大越平滑）</label>
+      <input type="range" id="sim" min="0" max="40" value="16">
+    </div>
+    <div>
+      <label>忽略小島 <span class="val" id="minVal">40</span> px</label>
+      <input type="range" id="minArea" min="0" max="600" value="40">
+    </div>
+    <div>
+      <label>顏色反轉</label>
+      <label style="font-size:12.5px;color:var(--ink-soft)"><input type="checkbox" id="invert"> 淺色是水、深色是陸</label>
+    </div>
+    <div>
+      <label>所有地名標籤</label>
+      <label style="font-size:12.5px;color:var(--ink-soft)"><input type="checkbox" id="addFrame" checked> 加圖框、羅盤、比例尺</label>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="primary" id="build" disabled>描邊並產生</button>
+    <button id="download" disabled>下載 SVG</button>
+    <button id="apply" disabled>設為網站地圖底圖</button>
+    <span class="num" id="stat"></span>
+  </div>
+
+  <div class="panes">
+    <div class="pane">
+      <h3>原圖</h3>
+      <canvas id="srcCanvas" width="600" height="420"></canvas>
+    </div>
+    <div class="pane">
+      <h3>描邊結果</h3>
+      <div id="outPane">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 840"><rect width="1200" height="840" fill="#e4eff5"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="log" id="log">等待圖片…</div>
+
+  <div class="hint">
+    <b>怎麼拿到好用的圖？</b>（授權都要看一下）<br>
+    · <b>OpenStreetMap</b>：<code>openstreetmap.org</code> 右鍵「顯示地圖資料」或直接用列印／截圖。授權 ODbL，公開發佈要標「© OpenStreetMap contributors」。<br>
+    · <b>OpenTopoMap</b>：<code>opentopomap.org</code>，地形圖風格，CC-BY-SA，需署名。<br>
+    · <b>Wikimedia Commons</b>：搜 <code>Hong Kong map</code>，多為 CC BY-SA。<br>
+    · <b>政府「香港地圖服務」</b>：<code>hkmapservice.gov.hk</code>，官方免費地圖，最準。<br>
+    · ⚠️ <b>Google Maps / Apple Maps 截圖</b>：只能自己看，不能公開放到網站上（違反條款）。<br><br>
+    <b>描邊原理</b>：把圖片縮到 1200px、用「海水顏色 ± 容差」切成水／陸二值圖，再跑 marching squares 抓輪廓、Douglas–Peucker 簡化，最後填色成向量。所以<b>選對海水顏色是關鍵</b>——如果圖上還有其他藍色（河流、邊界線），把容差調小。
+  </div>
+</div>
+
+<script>
+"use strict";
+var $ = function (id) { return document.getElementById(id); };
+var OUT_W = 1200, OUT_H = 840;
+var state = { img: null, polys: [], svg: "" };
+
+function log(html) { $("log").innerHTML = html; }
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+  });
+}
+
+/* ── 圖片載入 ───────────────────────────── */
+$("drop").addEventListener("click", function () { $("file").click(); });
+$("file").addEventListener("change", function (e) { if (e.target.files[0]) loadImage(e.target.files[0]); });
+["dragenter", "dragover"].forEach(function (ev) {
+  $("drop").addEventListener(ev, function (e) { e.preventDefault(); $("drop").classList.add("on"); });
+});
+["dragleave", "drop"].forEach(function (ev) {
+  $("drop").addEventListener(ev, function (e) { e.preventDefault(); $("drop").classList.remove("on"); });
+});
+$("drop").addEventListener("drop", function (e) {
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) loadImage(f);
+});
+
+function loadImage(file) {
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function () {
+    URL.revokeObjectURL(url);
+    state.img = img;
+    log("已載入 <b>" + esc(file.name) + "</b>（" + img.width + "×" + img.height + "）");
+    drawSource();
+    detectSea();
+    $("build").disabled = false;
+    $("download").disabled = true;
+    $("apply").disabled = true;
+  };
+  img.onerror = function () { log('<span class="err">圖片讀取失敗</span>'); };
+  img.src = url;
+}
+
+var work = { canvas: document.createElement("canvas"), w: 0, h: 0, data: null };
+
+function prepare() {
+  var img = state.img;
+  var scale = Math.min(1400 / img.width, 1000 / img.height, 1);
+  var w = Math.max(2, Math.round(img.width * scale));
+  var h = Math.max(2, Math.round(img.height * scale));
+  work.canvas.width = w;
+  work.canvas.height = h;
+  var ctx = work.canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, w, h);
+  work.w = w; work.h = h;
+  work.data = ctx.getImageData(0, 0, w, h).data;
+  return work;
+}
+
+function drawSource() {
+  var w = prepare();
+  var c = $("srcCanvas");
+  var maxW = 600;
+  c.width = Math.min(w.w, maxW);
+  c.height = Math.round(w.h * (c.width / w.w));
+  var ctx = c.getContext("2d");
+  ctx.drawImage(work.canvas, 0, 0, c.width, c.height);
+}
+
+/* ── 自動偵測海水色（取邊框像素中位數）──── */
+function detectSea() {
+  if (!state.img) return;
+  var w = prepare();
+  var d = w.data, W = w.w, H = w.h;
+  var samples = [];
+  function push(x, y) {
+    var i = (y * W + x) * 4;
+    samples.push([d[i], d[i + 1], d[i + 2]]);
+  }
+  for (var x = 0; x < W; x += Math.max(1, Math.floor(W / 60))) { push(x, 0); push(x, H - 1); }
+  for (var y = 0; y < H; y += Math.max(1, Math.floor(H / 60))) { push(0, y); push(W - 1, y); }
+  samples.sort(function (a, b) { return (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]); });
+  var mid = samples[Math.floor(samples.length / 2)] || [170, 211, 223];
+  var hex = "#" + mid.map(function (v) {
+    var s = Math.max(0, Math.min(255, v)).toString(16);
+    return s.length < 2 ? "0" + s : s;
+  }).join("");
+  $("seaColor").value = hex;
+  $("swPreview").style.background = hex;
+  log("已偵測海水色 <b>" + hex + "</b>（可手動改，或用色票挑）。");
+}
+$("autoSea").addEventListener("click", detectSea);
+$("seaColor").addEventListener("input", function () {
+  $("swPreview").style.background = $("seaColor").value;
+});
+
+/* ── 建立二值遮罩 ───────────────────────── */
+function buildMask() {
+  var w = prepare();
+  var d = w.data, W = w.w, H = w.h;
+  var hex = $("seaColor").value.replace("#", "");
+  var sr = parseInt(hex.slice(0, 2), 16), sg = parseInt(hex.slice(2, 4), 16), sb = parseInt(hex.slice(4, 6), 16);
+  var tol = +$("tol").value;
+  var invert = $("invert").checked;
+
+  var mask = new Uint8Array(W * H);   // 1 = 陸地
+  for (var i = 0, p = 0; i < mask.length; i++, p += 4) {
+    var dist = Math.abs(d[p] - sr) + Math.abs(d[p + 1] - sg) + Math.abs(d[p + 2] - sb);
+    var isWater = dist <= tol;
+    if (invert) isWater = !isWater;
+    mask[i] = isWater ? 0 : 1;
+  }
+  return { mask: mask, W: W, H: H };
+}
+
+/* ── Marching squares 抓輪廓 ────────────── */
+function traceContours(mask, W, H) {
+  var segs = [];
+  function M(x, y) { return [x + 0.5, y]; }
+  function R(x, y) { return [x + 1, y + 0.5]; }
+  function B(x, y) { return [x + 0.5, y + 1]; }
+  function L(x, y) { return [x, y + 0.5]; }
+
+  for (var y = 0; y < H - 1; y++) {
+    for (var x = 0; x < W - 1; x++) {
+      var a = mask[y * W + x];           // TL
+      var b = mask[y * W + x + 1];       // TR
+      var c = mask[(y + 1) * W + x + 1]; // BR
+      var d = mask[(y + 1) * W + x];     // BL
+      var idx = a * 8 + b * 4 + c * 2 + d;
+      switch (idx) {
+        case 1:  segs.push([L(x, y), B(x, y)]); break;
+        case 2:  segs.push([B(x, y), R(x, y)]); break;
+        case 3:  segs.push([L(x, y), R(x, y)]); break;
+        case 4:  segs.push([R(x, y), M(x, y)]); break;
+        case 5:  segs.push([L(x, y), M(x, y)]); segs.push([R(x, y), B(x, y)]); break;
+        case 6:  segs.push([M(x, y), B(x, y)]); break;
+        case 7:  segs.push([L(x, y), M(x, y)]); break;
+        case 8:  segs.push([M(x, y), L(x, y)]); break;
+        case 9:  segs.push([M(x, y), B(x, y)]); break;
+        case 10: segs.push([M(x, y), R(x, y)]); segs.push([L(x, y), B(x, y)]); break;
+        case 11: segs.push([M(x, y), R(x, y)]); break;
+        case 12: segs.push([L(x, y), R(x, y)]); break;
+        case 13: segs.push([B(x, y), R(x, y)]); break;
+        case 14: segs.push([L(x, y), B(x, y)]); break;
+        default: break;
+      }
+    }
+  }
+  return segs;
+}
+
+/* 把線段串成閉合環 */
+function stitch(segs) {
+  var map = {};
+  function key(p) { return (p[0] * 2).toFixed(0) + "," + (p[1] * 2).toFixed(0); }
+
+  segs.forEach(function (s) {
+    var k1 = key(s[0]), k2 = key(s[1]);
+    (map[k1] = map[k1] || []).push({ to: k2, pt: s[1] });
+    (map[k2] = map[k2] || []).push({ to: k1, pt: s[0] });
+  });
+
+  var used = {};
+  var rings = [];
+  Object.keys(map).forEach(function (start) {
+    if (used[start]) return;
+    var ring = [];
+    var cur = start;
+    var guard = 0;
+    while (cur && !used[cur] && guard++ < 50000) {
+      used[cur] = true;
+      var pt = map[cur][0].pt;
+      ring.push(pt);
+      var nexts = map[cur].filter(function (n) { return !used[n.to]; });
+      cur = nexts.length ? nexts[0].to : null;
+    }
+    if (ring.length > 3) rings.push(ring);
+  });
+  return rings;
+}
+
+/* Douglas–Peucker 簡化 */
+function rdp(points, eps) {
+  if (points.length < 3) return points;
+  var first = 0, last = points.length - 1;
+  var keep = new Uint8Array(points.length);
+  keep[first] = keep[last] = 1;
+
+  var stack = [[first, last]];
+  while (stack.length) {
+    var seg = stack.pop();
+    var a = points[seg[0]], b = points[seg[1]];
+    var maxD = -1, maxI = -1;
+    for (var i = seg[0] + 1; i < seg[1]; i++) {
+      var p = points[i];
+      var dx = b[0] - a[0], dy = b[1] - a[1];
+      var len = Math.sqrt(dx * dx + dy * dy) || 1e-6;
+      var d = Math.abs(dy * p[0] - dx * p[1] + b[0] * a[1] - b[1] * a[0]) / len;
+      if (d > maxD) { maxD = d; maxI = i; }
+    }
+    if (maxD > eps && maxI > 0) {
+      keep[maxI] = 1;
+      stack.push([seg[0], maxI], [maxI, seg[1]]);
+    }
+  }
+  var out = [];
+  for (var j = 0; j < points.length; j++) if (keep[j]) out.push(points[j]);
+  return out;
+}
+
+function area(ring) {
+  var s = 0;
+  for (var i = 0; i < ring.length; i++) {
+    var a = ring[i], b = ring[(i + 1) % ring.length];
+    s += a[0] * b[1] - b[0] * a[1];
+  }
+  return Math.abs(s / 2);
+}
+
+/* ── 產生 SVG ───────────────────────────── */
+function build() {
+  if (!state.img) return;
+  var t0 = performance.now();
+  var m = buildMask();
+  var segs = traceContours(m.mask, m.W, m.H);
+  var rings = stitch(segs);
+
+  var eps = +$("sim").value / 10;
+  var minA = +$("minArea").value;
+
+  var kept = rings
+    .filter(function (r) { return area(r) >= minA; })
+    .map(function (r) { return rdp(r, eps); })
+    .filter(function (r) { return r.length >= 3; });
+
+  state.polys = kept;
+
+  /* 縮放到 1200×840，保持長寬比 */
+  var s = Math.min(OUT_W / m.W, OUT_H / m.H);
+  var ox = (OUT_W - m.W * s) / 2;
+  var oy = (OUT_H - m.H * s) / 2;
+  function tx(p) { return [(ox + p[0] * s).toFixed(1), (oy + p[1] * s).toFixed(1)]; }
+
+  var o = [];
+  o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 840" width="1200" height="840" role="img" aria-label="地圖">');
+  o.push('<defs>');
+  o.push('<pattern id="g100" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="#b9cede" stroke-width="0.7" opacity="0.45"/></pattern>');
+  o.push('<pattern id="g20" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="#c9dae6" stroke-width="0.3" opacity="0.35"/></pattern>');
+  o.push('<pattern id="seaHatch" width="26" height="14" patternUnits="userSpaceOnUse"><path d="M0 10 q6.5 -4 13 0 t13 0" fill="none" stroke="#a9c3d2" stroke-width="0.65" opacity="0.35"/></pattern>');
+  o.push('<linearGradient id="landG" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#fdfbf5"/><stop offset="60%" stop-color="#f6f1e4"/><stop offset="100%" stop-color="#ede6d4"/></linearGradient>');
+  o.push('<filter id="paperTex"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="11" result="n"/><feColorMatrix in="n" type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.06"/></feComponentTransfer><feComposite in2="SourceGraphic" operator="over"/></filter>');
+  o.push('</defs>');
+  o.push('<rect width="1200" height="840" fill="#e4eff5"/>');
+  o.push('<rect width="1200" height="840" fill="url(#seaHatch)"/>');
+  o.push('<rect width="1200" height="840" fill="url(#g20)"/>');
+  o.push('<rect width="1200" height="840" fill="url(#g100)"/>');
+  o.push('<g fill="url(#landG)" stroke="#465d69" stroke-width="0.9" stroke-linejoin="round" fill-rule="evenodd">');
+  kept.forEach(function (r) {
+    var d = "";
+    r.forEach(function (p, i) {
+      var q = tx(p);
+      d += (i ? "L" : "M") + q[0] + " " + q[1];
+    });
+    o.push('<path d="' + d + 'Z"/>');
+  });
+  o.push('</g>');
+
+  if ($("addFrame").checked) {
+    o.push('<rect x="26" y="26" width="1148" height="788" fill="none" stroke="#7c95a2" stroke-width="1.4"/>');
+    o.push('<rect x="34" y="34" width="1132" height="772" fill="none" stroke="#7c95a2" stroke-width="0.5" stroke-dasharray="7 7"/>');
+    o.push('<g transform="translate(1108,730)" opacity="0.9"><circle r="34" fill="none" stroke="#7c95a2" stroke-width="0.9"/><path d="M0-30 L7-5 L0 0 L-7-5 Z" fill="#b4342a"/><path d="M0 30 L7 5 L0 0 L-7 5 Z" fill="#3f5561" opacity="0.45"/><text y="-40" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#243740">N</text></g>');
+    o.push('<g transform="translate(58,88)"><text font-family="\'Songti TC\',\'Noto Serif TC\',serif" font-size="26" fill="#1d2f39" letter-spacing="9">香港</text><text y="19" font-family="ui-monospace,monospace" font-size="8.5" letter-spacing="2.5" fill="#6b8290">TRACED · VECTOR</text></g>');
+  }
+  o.push('<rect width="1200" height="840" filter="url(#paperTex)" fill="none" pointer-events="none"/>');
+  o.push('</svg>');
+
+  state.svg = o.join("");
+  $("outPane").innerHTML = state.svg;
+  $("download").disabled = false;
+  $("apply").disabled = false;
+
+  var ms = Math.round(performance.now() - t0);
+  $("stat").textContent = kept.length + " 個輪廓 · " + (state.svg.length / 1024).toFixed(1) + " KB · " + ms + "ms";
+  log("<b>描邊完成</b>：" + rings.length + " 個原始輪廓 → 保留 " + kept.length + " 個（已濾掉小於 " + minA + " px 的）。\n" +
+      "共用 " + ms + " ms。\n若雜點太多：把「忽略小島」調大；若線條太碎：把「簡化程度」調大。");
+}
+
+$("build").addEventListener("click", build);
+
+["tol", "sim", "minArea"].forEach(function (id) {
+  $(id).addEventListener("input", function () {
+    if (id === "tol") $("tolVal").textContent = $("tol").value;
+    if (id === "sim") $("simVal").textContent = ($("sim").value / 10).toFixed(1);
+    if (id === "minArea") $("minVal").textContent = $("minArea").value;
+  });
+});
+
+$("download").addEventListener("click", function () {
+  if (!state.svg) return;
+  var blob = new Blob([state.svg], { type: "image/svg+xml" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = "hk-map.svg"; a.click();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+  log("已下載 <b>hk-map.svg</b>。回到網站地圖頁 → 編輯模式 → 換地圖底圖。");
+});
+
+$("apply").addEventListener("click", function () {
+  var sdk = window.spherse;
+  if (!sdk || !sdk.uploadFile) {
+    log("這裡沒有 Spherse 環境，請用<b>下載 SVG</b> 再手動上傳。");
+    return;
+  }
+  if (!state.svg) return;
+  var btn = $("apply");
+  btn.disabled = true;
+  log("上傳中…");
+  var blob = new Blob([state.svg], { type: "image/svg+xml" });
+  sdk.uploadFile({ dirPath: "oc-world/media", name: "hk-map-traced.svg", data: blob })
+    .then(function (res) {
+      var rel = String(res.path || "").replace(/^oc-world\//, "");
+      return sdk.data.mutate({
+        file: "oc-world/data/world.data.json",
+        name: "updateMap",
+        args: { image: rel, note: "香港 · 由圖片描邊生成" }
+      }).then(function () { return rel; });
+    })
+    .then(function (rel) {
+      log("<b>已設為地圖底圖</b>：" + esc(rel) + "\n回到網站地圖頁重新整理即可。");
+      btn.disabled = false;
+    })
+    .catch(function (err) {
+      log('<span class="err">失敗：' + esc((err && err.message) || err) + "</span>\n可改用下載 SVG。");
+      btn.disabled = false;
+    });
+});
+</script>
+</body>
+</html>

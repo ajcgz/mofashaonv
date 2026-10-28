@@ -1,0 +1,363 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 840" width="1200" height="840" role="img" aria-label="香港地圖">
+  <defs>
+    <pattern id="g100" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0H0V60" fill="none" stroke="#b9cede" stroke-width="0.7" opacity="0.45"/>
+    </pattern>
+    <pattern id="g20" width="12" height="12" patternUnits="userSpaceOnUse">
+      <path d="M12 0H0V12" fill="none" stroke="#c9dae6" stroke-width="0.3" opacity="0.35"/>
+    </pattern>
+    <pattern id="seaHatch" width="26" height="14" patternUnits="userSpaceOnUse">
+      <path d="M0 10 q6.5 -4 13 0 t13 0" fill="none" stroke="#a9c3d2" stroke-width="0.65" opacity="0.35"/>
+    </pattern>
+    <pattern id="urbanHatch" width="6" height="6" patternUnits="userSpaceOnUse">
+      <path d="M0 6 L6 0" stroke="#bdb09d" stroke-width="0.5" opacity="0.55"/>
+    </pattern>
+    <pattern id="greenHatch" width="9" height="9" patternUnits="userSpaceOnUse">
+      <path d="M0 9 L9 0" stroke="#a2bf86" stroke-width="0.45" opacity="0.5"/>
+    </pattern>
+    <linearGradient id="landG" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#fdfbf5"/>
+      <stop offset="60%" stop-color="#f6f1e4"/>
+      <stop offset="100%" stop-color="#ede6d4"/>
+    </linearGradient>
+    <radialGradient id="hillG" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#c7ba9d" stop-opacity="0.48"/>
+      <stop offset="100%" stop-color="#c7ba9d" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="landShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1.6" stdDeviation="1.8" flood-color="#22343f" flood-opacity="0.22"/>
+    </filter>
+    <filter id="paperTex" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="11" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.065"/></feComponentTransfer>
+      <feComposite in2="SourceGraphic" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- 海 -->
+  <rect width="1200" height="840" fill="#e4eff5"/>
+  <rect width="1200" height="840" fill="url(#seaHatch)"/>
+  <rect width="1200" height="840" fill="url(#g20)"/>
+  <rect width="1200" height="840" fill="url(#g100)"/>
+
+  <!-- 等深線 -->
+  <g fill="none" stroke="#b2cbda" stroke-width="0.7" opacity="0.45">
+    <path d="M0 292 q124 42 92 124 q-30 82 -112 62"/>
+    <path d="M0 360 q98 34 74 104 q-24 68 -98 52"/>
+    <path d="M0 430 q70 28 52 84 q-18 56 -76 46"/>
+    <path d="M1200 462 q-92 42 -72 112 q20 70 102 60"/>
+    <path d="M1200 542 q-72 30 -56 86 q16 56 76 48"/>
+    <path d="M1200 622 q-54 24 -42 66 q12 42 60 36"/>
+    <path d="M412 840 q62 -72 152 -72 q92 0 132 62"/>
+    <path d="M120 840 q80 -54 168 -34 q86 20 96 74"/>
+  </g>
+
+  <!-- ═══ 陸地 ═══ -->
+  <g filter="url(#landShadow)" stroke="#3f5561" stroke-width="1.45" stroke-linejoin="round">
+
+    <!-- 新界 + 九龍 -->
+    <path d="M242 340 L262 312 L286 296 L302 274 L306 252 L300 236 L318 212 L340 196 L372 186
+             L410 178 L450 172 L360 120 L380 84 L420 72 L470 66 L520 64 L570 70 L620 84 L670 104
+             L720 130 L780 164 L840 196 L900 224 L925 250 L920 268 L906 284 L886 296 L866 300
+             L846 296 L826 288 L806 282 L786 272 L768 266
+             L748 268 L730 276 L714 290 L700 304
+             L714 312 L734 310 L756 304 L778 298 L800 300 L818 306
+             L836 316 L852 334 L864 356 L868 378 L858 396 L842 404 L826 398
+             L834 410 L844 426 L836 440 L820 444 L804 436 L792 424
+             L800 442 L812 458 L806 474 L790 484 L772 476
+             L758 488 L740 494 L724 492 L708 484
+             L716 494 L742 504 L768 514 L786 528 L792 544 L786 556
+             L768 556 L742 552 L716 548 L690 542 L666 536 L662 534 L654 528
+             L646 516 L638 502 L630 486 L626 470 L620 456 L612 444 L600 436
+             L588 430 L574 420 L562 410 L550 400 L540 388 L530 376 L518 368 L506 362
+             L492 360 L478 356 L464 350 L450 344 L436 340 L422 336 L408 332 L394 330
+             L380 330 L366 332 L352 336 L338 338 L324 340 L310 338 L296 332 Z"
+          fill="url(#landG)"/>
+
+    <!-- 大嶼山 -->
+    <path d="M48 614 L58 640 L70 664 L86 682 L108 690 L132 686 L152 676 L170 664
+             L186 650 L204 634 L222 618 L240 604 L258 592 L276 580 L294 566 L312 552
+             L326 536 L334 518 L338 500 L332 486 L318 478 L300 476 L282 480 L264 490
+             L248 502 L234 516 L220 530 L206 540 L192 546 L176 548 L160 546 L142 542
+             L124 540 L106 542 L88 548 L72 558 L58 572 L48 588 Z"
+          fill="url(#landG)"/>
+
+    <!-- 赤鱲角（機場） -->
+    <path d="M132 494 L152 482 L178 476 L206 478 L226 488 L232 502 L220 514 L196 520
+             L170 520 L148 512 L134 504 Z" fill="#eae3d3"/>
+    <path d="M136 500 L228 496" stroke="#9fb0b8" stroke-width="1.6" fill="none"/>
+    <path d="M138 510 L226 506" stroke="#9fb0b8" stroke-width="1.6" fill="none"/>
+
+    <!-- 香港島 -->
+    <path d="M573 558 L596 548 L619 544 L635 556 L651 562 L668 566 L687 560 L701 554
+             L708 538 L741 546 L757 554 L772 562 L790 576 L807 592 L815 596
+             L807 626 L809 658 L778 660 L743 682 L724 668 L708 648 L687 636
+             L629 624 L619 640 L596 632 L581 596 L565 580 Z"
+          fill="url(#landG)"/>
+
+    <!-- 青衣 -->
+    <path d="M500 434 L516 418 L536 408 L556 412 L568 426 L562 444 L542 454 L520 452 L504 446 Z"
+          fill="url(#landG)" stroke-width="1.15"/>
+    <!-- 馬灣 -->
+    <path d="M436 412 L452 404 L466 414 L458 428 L442 426 Z" fill="url(#landG)" stroke-width="1"/>
+    <!-- 坪洲 -->
+    <path d="M394 540 L410 536 L420 546 L406 556 L392 550 Z" fill="url(#landG)" stroke-width="1"/>
+    <!-- 長洲 -->
+    <path d="M362 694 L378 686 L394 690 L400 704 L386 716 L366 710 Z" fill="url(#landG)" stroke-width="1.1"/>
+    <!-- 南丫島 -->
+    <path d="M524 660 L554 648 L582 656 L596 674 L592 698 L572 716 L548 720 L530 704 L518 682 Z"
+          fill="url(#landG)" stroke-width="1.15"/>
+    <!-- 東龍洲 -->
+    <path d="M876 628 L896 624 L908 638 L892 650 L876 642 Z" fill="url(#landG)" stroke-width="1"/>
+    <!-- 蒲台島 -->
+    <path d="M818 770 L838 764 L852 778 L834 788 Z" fill="url(#landG)" stroke-width="1"/>
+    <!-- 塔門 -->
+    <path d="M1012 170 L1036 164 L1050 178 L1030 192 Z" fill="url(#landG)" stroke-width="1"/>
+    <!-- 東平洲 -->
+    <path d="M1100 94 L1136 90 L1148 106 L1110 112 Z" fill="url(#landG)" stroke-width="1"/>
+  </g>
+
+  <!-- 水庫 / 內陸水體 -->
+  <g fill="#cfe3ec" stroke="#7fa3b4" stroke-width="0.8">
+    <path d="M770 186 q46 -18 84 4 q34 20 22 44 q-14 26 -60 24 q-46 -2 -56 -30 q-8 -24 10 -42 Z"/>
+    <path d="M690 250 q26 -12 44 4 q18 16 6 34 q-14 18 -38 12 q-24 -6 -24 -26 q0 -14 12 -24 Z"/>
+    <path d="M486 322 q30 -14 50 2 q18 16 2 32 q-18 18 -44 10 q-26 -8 -22 -26 q2 -12 14 -18 Z"/>
+    <path d="M330 402 q24 -12 40 4 q16 16 0 30 q-18 14 -38 6 q-20 -8 -16 -24 q2 -10 14 -16 Z"/>
+    <path d="M146 604 q26 -12 44 4 q16 16 0 30 q-18 14 -40 6 q-22 -8 -18 -24 q2 -10 14 -16 Z"/>
+  </g>
+
+  <!-- 郊野公園 -->
+  <g fill="url(#greenHatch)" stroke="none" opacity="0.8">
+    <path d="M430 180 q62 -40 130 -22 q58 16 58 60 q0 46 -58 58 q-70 14 -118 -18 q-34 -26 -12 -78 Z"/>
+    <path d="M688 196 q56 -26 106 -2 q46 22 38 62 q-10 44 -70 44 q-62 0 -80 -36 q-12 -34 6 -68 Z"/>
+    <path d="M792 344 q46 -22 78 6 q28 26 8 60 q-22 36 -70 26 q-42 -12 -38 -50 q4 -26 22 -42 Z"/>
+    <path d="M596 576 q52 -20 98 6 q40 24 24 62 q-18 42 -74 40 q-54 -2 -68 -44 q-10 -40 20 -64 Z"/>
+    <path d="M118 540 q62 -34 124 -10 q56 22 44 74 q-12 54 -86 54 q-72 0 -94 -50 q-16 -38 12 -68 Z"/>
+    <path d="M248 298 q46 -26 90 -4 q40 18 30 58 q-10 38 -64 40 q-54 2 -70 -34 q-12 -32 14 -60 Z"/>
+    <path d="M700 420 q40 -18 66 6 q24 22 6 52 q-20 32 -58 22 q-36 -10 -32 -44 q2 -22 18 -36 Z"/>
+  </g>
+
+  <!-- 市區 -->
+  <g fill="url(#urbanHatch)" stroke="none" opacity="0.9">
+    <path d="M612 468 L664 456 L712 466 L760 490 L772 514 L742 526 L686 532 L644 522 L618 500 Z"/>
+    <path d="M596 564 L700 554 L770 576 L796 602 L742 606 L664 594 L606 586 Z"/>
+    <path d="M470 356 L540 344 L600 372 L600 410 L534 424 L474 402 Z"/>
+    <path d="M660 298 L716 304 L730 346 L682 362 L654 334 Z"/>
+    <path d="M740 496 L800 510 L812 540 L764 546 L734 522 Z"/>
+    <path d="M266 330 L330 320 L352 354 L300 370 L262 358 Z"/>
+    <path d="M330 198 L404 192 L420 234 L356 248 L326 230 Z"/>
+    <path d="M556 94 L612 88 L624 122 L566 130 L548 112 Z"/>
+    <path d="M632 188 L692 184 L702 230 L646 238 L626 212 Z"/>
+    <path d="M198 498 L252 494 L266 532 L212 540 L186 518 Z"/>
+    <path d="M288 298 L330 304 L330 340 L290 336 Z"/>
+  </g>
+
+  <!-- 山 -->
+  <g>
+    <circle cx="561" cy="300" r="64" fill="url(#hillG)"/>
+    <circle cx="658" cy="420" r="40" fill="url(#hillG)"/>
+    <circle cx="600" cy="580" r="30" fill="url(#hillG)"/>
+    <circle cx="232" cy="600" r="42" fill="url(#hillG)"/>
+    <circle cx="155" cy="618" r="36" fill="url(#hillG)"/>
+    <circle cx="744" cy="330" r="44" fill="url(#hillG)"/>
+    <circle cx="793" cy="320" r="34" fill="url(#hillG)"/>
+    <circle cx="948" cy="280" r="30" fill="url(#hillG)"/>
+    <g fill="none" stroke="#b3a586" stroke-width="0.6" opacity="0.5">
+      <path d="M518 306 q22 -26 50 -24 q30 2 44 26 q14 26 -8 44 q-26 22 -60 12 q-34 -10 -26 -58 Z"/>
+      <path d="M538 310 q16 -18 34 -16 q20 2 28 18 q8 18 -8 30 q-18 14 -42 6 q-24 -8 -12 -38 Z"/>
+      <path d="M636 416 q16 -14 32 -8 q16 6 16 24 q0 18 -20 20 q-22 2 -30 -14 q-6 -14 2 -22 Z"/>
+      <path d="M584 580 q12 -12 26 -8 q14 4 14 18 q0 14 -18 16 q-18 2 -24 -10 q-4 -10 2 -16 Z"/>
+      <path d="M208 600 q14 -18 34 -16 q20 2 24 20 q4 20 -16 28 q-24 10 -42 -6 q-12 -12 0 -26 Z"/>
+      <path d="M716 330 q16 -16 34 -10 q18 6 16 26 q-2 20 -24 22 q-24 2 -32 -16 q-4 -12 6 -22 Z"/>
+      <path d="M770 320 q12 -14 26 -8 q14 6 12 22 q-2 16 -20 16 q-18 0 -22 -14 q-2 -10 4 -16 Z"/>
+      <path d="M132 618 q12 -16 30 -14 q18 2 22 18 q4 18 -14 24 q-22 8 -38 -6 q-10 -10 0 -22 Z"/>
+    </g>
+    <!-- 山峰三角標 -->
+    <g fill="#8a7a5c" stroke="none">
+      <path d="M561 288 l5 9 h-10 Z"/><path d="M155 606 l5 9 h-10 Z"/><path d="M232 588 l5 9 h-10 Z"/>
+      <path d="M600 568 l5 9 h-10 Z"/><path d="M658 408 l5 9 h-10 Z"/><path d="M793 308 l5 9 h-10 Z"/>
+      <path d="M948 268 l5 9 h-10 Z"/>
+    </g>
+  </g>
+
+  <!-- 跨海通道 -->
+  <g fill="none" opacity="0.9">
+    <!-- 橋 -->
+    <g stroke="#6b7f8a" stroke-width="2.6" stroke-linecap="round">
+      <path d="M232 502 L436 412"/>   <!-- 港珠澳／北大嶼山沿線 -->
+      <path d="M452 404 L500 434"/>   <!-- 青馬 -->
+      <path d="M568 426 L600 436"/>   <!-- 汀九／青衣 -->
+    </g>
+    <g stroke="#8b9aa3" stroke-width="1.6" stroke-dasharray="5 4">
+      <path d="M662 534 L651 562"/>   <!-- 紅磡海底隧道 -->
+      <path d="M786 552 L812 592"/>   <!-- 東區海底隧道 -->
+      <path d="M630 486 L600 560"/>   <!-- 西區海底隧道 -->
+    </g>
+  </g>
+
+  <!-- 港鐵 -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.92">
+    <path d="M530 378 L566 394 L598 420 L628 450 L654 472 L664 494 L656 518 L646 540 L651 562"
+          stroke="#d0392f" stroke-width="2.3"/>
+    <path d="M581 584 L600 566 L620 556 L646 562 L672 570 L690 558 L708 544 L741 552 L772 566 L790 580 L807 594"
+          stroke="#2f6cab" stroke-width="2.3"/>
+    <path d="M700 440 L676 466 L664 490 L670 508 L702 516 L742 506 L766 496 L786 528 L792 544"
+          stroke="#3f9a52" stroke-width="2.1"/>
+    <path d="M577 94 L600 116 L646 180 L664 226 L690 300 L700 360 L706 412 L686 470 L666 512 L651 550"
+          stroke="#7fb2d6" stroke-width="2.3"/>
+    <path d="M262 336 L310 314 L360 280 L404 232 L462 216 L524 244 L580 288 L638 330 L688 372 L706 412"
+          stroke="#8d5a3a" stroke-width="2.1"/>
+    <path d="M232 508 L290 520 L370 492 L440 460 L500 438 L536 414 L590 452 L630 478 L646 520 L651 556"
+          stroke="#d97b2b" stroke-width="2.1"/>
+    <path d="M766 496 L800 486 L830 500 L848 512" stroke="#7a5aa8" stroke-width="2.1"/>
+    <path d="M672 570 L654 604 L629 622" stroke="#98b83f" stroke-width="1.9"/>
+  </g>
+
+  <!-- 車站（白點）與轉車站（雙圈） -->
+  <g fill="#ffffff" stroke="#3f5561" stroke-width="0.9">
+    <circle cx="530" cy="378" r="2.3"/><circle cx="628" cy="450" r="2.3"/><circle cx="664" cy="494" r="2.3"/>
+    <circle cx="646" cy="540" r="2.3"/><circle cx="620" cy="556" r="2.3"/><circle cx="690" cy="558" r="2.3"/>
+    <circle cx="741" cy="552" r="2.3"/><circle cx="664" cy="490" r="2.3"/><circle cx="702" cy="516" r="2.3"/>
+    <circle cx="577" cy="94" r="2.3"/><circle cx="664" cy="226" r="2.3"/><circle cx="700" cy="360" r="2.3"/>
+    <circle cx="686" cy="470" r="2.3"/><circle cx="262" cy="336" r="2.3"/><circle cx="404" cy="232" r="2.3"/>
+    <circle cx="524" cy="244" r="2.3"/><circle cx="310" cy="314" r="2.3"/><circle cx="232" cy="508" r="2.3"/>
+    <circle cx="830" cy="500" r="2.3"/><circle cx="600" cy="566" r="2.3"/>
+  </g>
+  <g fill="none" stroke="#22343f" stroke-width="1.2">
+    <circle cx="651" cy="562" r="4.4"/><circle cx="706" cy="412" r="4.4"/><circle cx="590" cy="452" r="4.4"/>
+    <circle cx="646" cy="520" r="4"/><circle cx="536" cy="414" r="4"/>
+  </g>
+
+  <!-- 渡輪 -->
+  <g stroke="#5b8fa6" stroke-width="0.95" stroke-dasharray="4 4" opacity="0.55" fill="none">
+    <path d="M651 566 L656 578"/>
+    <path d="M616 500 L651 558"/>
+    <path d="M326 536 L332 594"/>
+    <path d="M396 548 L440 460"/>
+    <path d="M376 694 L392 620"/>
+    <path d="M556 660 L596 632"/>
+  </g>
+
+  <!-- 地名 -->
+  <g font-family="'PingFang TC','Noto Sans TC','Microsoft JhengHei',sans-serif" fill="#243740">
+    <text x="336" y="174" font-size="22" letter-spacing="12" opacity="0.38">新　界</text>
+    <text x="672" y="612" font-size="13" letter-spacing="6" opacity="0.48" text-anchor="middle">香港島</text>
+    <text x="236" y="562" font-size="13" letter-spacing="5" opacity="0.48">大嶼山</text>
+    <text x="846" y="422" font-size="9.5" letter-spacing="3" opacity="0.55">西貢半島</text>
+
+    <g font-size="10.5" letter-spacing="0.5">
+      <circle cx="262" cy="336" r="2" fill="#b4342a"/><text x="272" y="340">屯門</text>
+      <circle cx="329" cy="202" r="2" fill="#b4342a"/><text x="339" y="206">天水圍</text>
+      <circle cx="387" cy="230" r="2" fill="#b4342a"/><text x="397" y="234">元朗</text>
+      <circle cx="577" cy="94" r="2" fill="#b4342a"/><text x="587" y="98">上水</text>
+      <circle cx="600" cy="116" r="2" fill="#b4342a"/><text x="610" y="120">粉嶺</text>
+      <circle cx="654" cy="212" r="2" fill="#b4342a"/><text x="664" y="216">大埔</text>
+      <circle cx="700" cy="354" r="2" fill="#b4342a"/><text x="710" y="358">沙田</text>
+      <circle cx="770" cy="316" r="2" fill="#b4342a"/><text x="780" y="320">馬鞍山</text>
+      <circle cx="530" cy="382" r="2" fill="#b4342a"/><text x="496" y="398" font-size="10">荃灣</text>
+      <circle cx="586" cy="414" r="2" fill="#b4342a"/><text x="550" y="430" font-size="10">葵涌</text>
+      <circle cx="852" cy="362" r="2" fill="#b4342a"/><text x="862" y="366">西貢</text>
+      <circle cx="830" cy="504" r="2" fill="#b4342a"/><text x="840" y="508">將軍澳</text>
+      <circle cx="700" cy="428" r="2" fill="#b4342a"/><text x="710" y="432">九龍塘</text>
+      <circle cx="664" cy="490" r="2" fill="#b4342a"/><text x="626" y="492" font-size="10">旺角</text>
+      <circle cx="612" cy="480" r="2" fill="#b4342a"/><text x="552" y="482" font-size="10">深水埗</text>
+      <circle cx="662" cy="534" r="2" fill="#b4342a"/><text x="672" y="530" font-size="10">尖沙咀</text>
+      <circle cx="766" cy="524" r="2" fill="#b4342a"/><text x="776" y="528">觀塘</text>
+      <circle cx="635" cy="558" r="2" fill="#b4342a"/><text x="596" y="578" font-size="10">中環</text>
+      <circle cx="668" cy="568" r="2" fill="#b4342a"/><text x="678" y="586" font-size="10">灣仔</text>
+      <circle cx="708" cy="540" r="2" fill="#b4342a"/><text x="718" y="536" font-size="10">北角</text>
+      <circle cx="807" cy="594" r="2" fill="#b4342a"/><text x="817" y="598" font-size="10">柴灣</text>
+      <circle cx="632" cy="622" r="2" fill="#b4342a"/><text x="556" y="642" font-size="10">香港仔</text>
+      <circle cx="743" cy="680" r="2" fill="#b4342a"/><text x="753" y="684" font-size="10">赤柱</text>
+      <circle cx="222" cy="540" r="2" fill="#b4342a"/><text x="232" y="536">東涌</text>
+      <circle cx="329" cy="592" r="2" fill="#b4342a"/><text x="282" y="608" font-size="10">梅窩</text>
+      <circle cx="56" cy="614" r="2" fill="#b4342a"/><text x="68" y="618" font-size="10">大澳</text>
+      <circle cx="383" cy="700" r="2" fill="#b4342a"/><text x="395" y="704" font-size="10">長洲</text>
+      <circle cx="556" cy="682" r="2" fill="#b4342a"/><text x="568" y="686" font-size="10">南丫島</text>
+    </g>
+  </g>
+
+  <!-- 維港 -->
+  <g opacity="0.95">
+    <text x="706" y="540" text-anchor="middle" font-family="Georgia,'Times New Roman',serif"
+          font-size="11.5" font-style="italic" fill="#3d7a94" letter-spacing="2">Victoria Harbour</text>
+    <text x="706" y="553" text-anchor="middle" font-family="'Songti TC','Noto Serif TC',serif"
+          font-size="8" fill="#3d7a94" letter-spacing="4">維 多 利 亞 港</text>
+  </g>
+
+  <!-- 地標 -->
+  <g font-family="'PingFang TC','Noto Sans TC',sans-serif" font-size="9" fill="#5a6f7a" letter-spacing="0.4">
+    <text x="136" y="470">✈ 赤鱲角機場</text>
+    <text x="346" y="510">迪士尼</text>
+    <text x="551" y="316">大帽山 957m</text>
+    <text x="646" y="404">獅子山 495m</text>
+    <text x="592" y="574">太平山 552m</text>
+    <text x="210" y="596">鳳凰山 934m</text>
+    <text x="884" y="618">東龍洲</text>
+    <text x="742" y="248" opacity="0.85">吐露港</text>
+    <text x="812" y="414" opacity="0.85">清水灣</text>
+    <text x="790" y="176" opacity="0.85">船灣淡水湖</text>
+    <text x="676" y="266" opacity="0.85">城門水塘</text>
+    <text x="930" y="272" opacity="0.85">蚺蛇尖</text>
+    <text x="150" y="596" opacity="0.85" text-anchor="end">石壁水塘</text>
+  </g>
+
+  <!-- 圖框與經緯 -->
+  <rect x="26" y="26" width="1148" height="788" fill="none" stroke="#7c95a2" stroke-width="1.4"/>
+  <rect x="34" y="34" width="1132" height="772" fill="none" stroke="#7c95a2" stroke-width="0.5" stroke-dasharray="7 7"/>
+  <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="9" fill="#6b8290">
+    <text x="34" y="20">113°50'E</text>
+    <text x="330" y="20">114°00'E</text>
+    <text x="620" y="20">114°10'E</text>
+    <text x="910" y="20">114°20'E</text>
+    <text x="1130" y="20" text-anchor="end">114°30'E</text>
+    <text x="20" y="70" text-anchor="end">22°30'N</text>
+    <text x="20" y="290" text-anchor="end">22°20'N</text>
+    <text x="20" y="510" text-anchor="end">22°15'N</text>
+    <text x="20" y="730" text-anchor="end">22°10'N</text>
+  </g>
+
+  <!-- 羅盤 -->
+  <g transform="translate(1108,730)" opacity="0.9">
+    <circle r="34" fill="none" stroke="#7c95a2" stroke-width="0.9"/>
+    <circle r="24" fill="none" stroke="#7c95a2" stroke-width="0.4" stroke-dasharray="2 5"/>
+    <path d="M0-30 L7-5 L0 0 L-7-5 Z" fill="#b4342a"/>
+    <path d="M0 30 L7 5 L0 0 L-7 5 Z" fill="#3f5561" opacity="0.45"/>
+    <text y="-40" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#243740">N</text>
+  </g>
+
+  <!-- 比例尺 -->
+  <g transform="translate(64,770)" opacity="0.85">
+    <rect x="0" y="0" width="48" height="5" fill="#3f5561"/>
+    <rect x="48" y="0" width="48" height="5" fill="#fdfbf5" stroke="#3f5561" stroke-width="0.7"/>
+    <rect x="96" y="0" width="48" height="5" fill="#3f5561"/>
+    <text x="0" y="19" font-family="ui-monospace,monospace" font-size="8.5" fill="#3f5561">0</text>
+    <text x="96" y="19" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#3f5561">5</text>
+    <text x="144" y="19" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#3f5561">10 km</text>
+  </g>
+
+  <!-- 圖名與圖例 -->
+  <g transform="translate(58,88)">
+    <text font-family="'Songti TC','Noto Serif TC',serif" font-size="26" fill="#1d2f39" letter-spacing="9">香港</text>
+    <text y="19" font-family="ui-monospace,monospace" font-size="8.5" letter-spacing="2.5" fill="#6b8290">HONG KONG · 1:200,000</text>
+  </g>
+  <g transform="translate(58,706)" font-family="'PingFang TC','Noto Sans TC',sans-serif" font-size="8.5" fill="#4d626d">
+    <rect x="0" y="-8" width="10" height="7" fill="url(#urbanHatch)" stroke="#b3a794" stroke-width="0.5"/>
+    <text x="14" y="-1">市區</text>
+    <rect x="54" y="-8" width="10" height="7" fill="url(#greenHatch)" stroke="#9dbb85" stroke-width="0.5"/>
+    <text x="68" y="-1">郊野公園</text>
+    <rect x="126" y="-8" width="10" height="7" fill="#cfe3ec" stroke="#7fa3b4" stroke-width="0.5"/>
+    <text x="140" y="-1">水塘</text>
+    <line x1="184" y1="-4" x2="204" y2="-4" stroke="#d0392f" stroke-width="2.1"/>
+    <text x="209" y="-1">港鐵</text>
+    <line x1="240" y1="-4" x2="260" y2="-4" stroke="#6b7f8a" stroke-width="2.4"/>
+    <text x="265" y="-1">橋</text>
+    <line x1="288" y1="-4" x2="308" y2="-4" stroke="#8b9aa3" stroke-width="1.4" stroke-dasharray="5 4"/>
+    <text x="313" y="-1">隧道</text>
+    <circle cx="356" cy="-4" r="2" fill="#b4342a"/>
+    <text x="362" y="-1">城鎮</text>
+  </g>
+
+  <rect width="1200" height="840" filter="url(#paperTex)" fill="none" pointer-events="none"/>
+</svg>

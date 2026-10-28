@@ -1,0 +1,391 @@
+{
+  "$manifest": {
+    "version": 1,
+    "desc": "OC 世界觀資料：世界設定（world）、人物（characters）、人物關係（relations）、背景故事（stories）",
+    "queries": {
+      "listCharacters": {
+        "desc": "查看人物，可按陣營過濾並排序",
+        "path": "characters",
+        "identity": "id",
+        "params": {
+          "faction": { "type": "string" },
+          "role": { "type": "string" },
+          "sort": { "type": "field" },
+          "dir": { "type": "enum", "values": ["asc", "desc"], "default": "asc" }
+        },
+        "defaultLimit": 50
+      },
+      "getCharacter": {
+        "desc": "按 ID 取得單個人物",
+        "path": "characters",
+        "identity": "id",
+        "defaultLimit": 1
+      },
+      "listRelations": {
+        "desc": "查看人物關係，可按起點 fromId、終點 toId 或類型過濾",
+        "path": "relations",
+        "identity": "id",
+        "params": {
+          "fromId": { "type": "string" },
+          "toId": { "type": "string" },
+          "type": { "type": "enum", "values": ["親屬", "摯友", "戀人", "師徒", "同盟", "敵對", "隸屬", "其他"] },
+          "sort": { "type": "field" },
+          "dir": { "type": "enum", "values": ["asc", "desc"], "default": "asc" }
+        },
+        "defaultLimit": 100
+      },
+      "listStories": {
+        "desc": "查看背景故事列表",
+        "path": "stories",
+        "identity": "id",
+        "params": {
+          "sort": { "type": "field" },
+          "dir": { "type": "enum", "values": ["asc", "desc"], "default": "asc" }
+        },
+        "defaultLimit": 50
+      },
+      "getStory": {
+        "desc": "按 ID 取得單篇故事全文",
+        "path": "stories",
+        "identity": "id",
+        "defaultLimit": 1
+      }
+    },
+    "mutations": {
+      "updateWorld": {
+        "desc": "修改世界設定與主色，只傳要改的欄位",
+        "op": "set",
+        "path": "world",
+        "fields": {
+          "name": { "type": "string" },
+          "tagline": { "type": "string" },
+          "intro": { "type": "string" },
+          "era": { "type": "string" },
+          "accent": { "type": "string" },
+          "footer": { "type": "string" }
+        }
+      },
+      "addCharacter": {
+        "desc": "新增人物",
+        "op": "append",
+        "path": "characters",
+        "fields": {
+          "name": { "type": "string", "required": true },
+          "alias": { "type": "string" },
+          "role": { "type": "string" },
+          "faction": { "type": "string" },
+          "age": { "type": "string" },
+          "tags": { "type": "string" },
+          "summary": { "type": "string" },
+          "story": { "type": "string" },
+          "image": { "type": "string" },
+          "order": { "type": "integer", "default": 0 }
+        },
+        "auto": { "id": "uuid", "createdAt": "nowIso" }
+      },
+      "updateCharacter": {
+        "desc": "修改人物，需傳 id",
+        "op": "update",
+        "path": "characters",
+        "match": "id",
+        "fields": {
+          "name": { "type": "string" },
+          "alias": { "type": "string" },
+          "role": { "type": "string" },
+          "faction": { "type": "string" },
+          "age": { "type": "string" },
+          "tags": { "type": "string" },
+          "summary": { "type": "string" },
+          "story": { "type": "string" },
+          "image": { "type": "string" },
+          "order": { "type": "integer" }
+        }
+      },
+      "removeCharacter": {
+        "desc": "刪除人物（其相關關係需先刪除）",
+        "op": "remove",
+        "path": "characters",
+        "match": "id"
+      },
+      "addRelation": {
+        "desc": "新增人物關係，fromId 為起點人物、toId 為終點人物",
+        "op": "append",
+        "path": "relations",
+        "fields": {
+          "fromId": { "type": "string", "required": true },
+          "toId": { "type": "string", "required": true },
+          "type": { "type": "enum", "values": ["親屬", "摯友", "戀人", "師徒", "同盟", "敵對", "隸屬", "其他"], "required": true },
+          "note": { "type": "string" },
+          "order": { "type": "integer", "default": 0 }
+        },
+        "auto": { "id": "uuid", "createdAt": "nowIso" }
+      },
+      "updateRelation": {
+        "desc": "修改人物關係，需傳 id",
+        "op": "update",
+        "path": "relations",
+        "match": "id",
+        "fields": {
+          "fromId": { "type": "string" },
+          "toId": { "type": "string" },
+          "type": { "type": "enum", "values": ["親屬", "摯友", "戀人", "師徒", "同盟", "敵對", "隸屬", "其他"] },
+          "note": { "type": "string" },
+          "order": { "type": "integer" }
+        }
+      },
+      "removeRelation": {
+        "desc": "刪除人物關係，需傳 id",
+        "op": "remove",
+        "path": "relations",
+        "match": "id"
+      },
+      "addStory": {
+        "desc": "新增背景故事，characters 為涉及人物 id 的逗號分隔字串",
+        "op": "append",
+        "path": "stories",
+        "fields": {
+          "title": { "type": "string", "required": true },
+          "body": { "type": "string" },
+          "characters": { "type": "string" },
+          "tags": { "type": "string" },
+          "order": { "type": "integer", "default": 0 }
+        },
+        "auto": { "id": "uuid", "createdAt": "nowIso" }
+      },
+      "updateStory": {
+        "desc": "修改背景故事，需傳 id",
+        "op": "update",
+        "path": "stories",
+        "match": "id",
+        "fields": {
+          "title": { "type": "string" },
+          "body": { "type": "string" },
+          "characters": { "type": "string" },
+          "tags": { "type": "string" },
+          "order": { "type": "integer" }
+        }
+      },
+      "removeStory": {
+        "desc": "刪除背景故事，需傳 id",
+        "op": "remove",
+        "path": "stories",
+        "match": "id"
+      }
+    }
+  },
+  "world": {
+    "name": "迴流紀",
+    "tagline": "每有一個人撿起骨頭，世界就往回退一年。",
+    "intro": "七百六十四年前，五位勇者把一個高維生物從牠的維度裡拽了下來，拆成 **七百六十四塊骨**，散落在七百六十四年的時間線上。\n\n牠沒有死。牠只是散開了。而每一塊骨，都在找一個撿得起它的人。\n\n骨一旦被「有資格者」承接，那一年就會從世界身上被拿走——時間整體倒退一年，多數人只覺得眼前這一幕好像經歷過，少數人什麼都記得。\n\n> 目前是**第 137 迴**。已經有一百三十七塊骨被撿起。距離牠重新完整，還有六百二十七年。",
+    "era": "迴流曆 第 137 迴 · 距拆骨之夜 627 年",
+    "accent": "#6b5f7d",
+    "footer": "迴流紀 · 個人 OC 世界觀檔案"
+  },
+  "characters": [
+    {
+      "id": "chr-yanzhu",
+      "name": "嚴筑",
+      "alias": "第 137 迴的製圖匠",
+      "role": "主角",
+      "faction": "拾骨者",
+      "age": "24",
+      "tags": "製圖,既視感,失眠",
+      "summary": "在地籍所畫地圖的年輕人。她的圖紙上總會多出一條不存在的巷子。",
+      "story": "嚴筑替地籍所畫圖，畫了三年。那些圖紙上總會自己冒出一條巷子——她沒有標過，長官要她擦掉，她擦不掉。那條巷子在她夢裡出現過七百多次。\n\n第 137 迴的秋天，拆遷隊在老宅地基裡挖出一枚溫熱的骨。她伸手去撿。指尖碰到的瞬間，全城的人同時停了一下，像想起某件沒做完的事。\n\n從那天起，她記得世界本來的樣子——包括那些被倒流抹掉的人。",
+      "image": "",
+      "order": 0,
+      "createdAt": "2025-02-01T08:00:00.000Z"
+    },
+    {
+      "id": "chr-shangyue",
+      "name": "商嶽",
+      "alias": "最後一位勇者",
+      "role": "遺物",
+      "faction": "勇者小隊",
+      "age": "764（外貌 31）",
+      "tags": "不死,記得每一迴,沉默",
+      "summary": "拆骨之夜的唯一倖存者。一塊骨嵌在他胸口，拔不出來，於是他不會老、不會死，也不會被時間帶走。",
+      "story": "拆骨之夜，五個人站在牠的投影下，用七百六十四條命換一個機會。他們成功了——牠被拆散，散在七百六十四年的時間裡。\n\n商嶽沒死。一塊骨嵌進他的胸口，從此他不老、不病、不能死，也沒辦法被倒流帶走。世界退到第 137 迴，而他仍然記得一個**還沒發生的夜晚**。\n\n> 「我不是活著。我是被留在原地。」",
+      "image": "",
+      "order": 1,
+      "createdAt": "2025-02-01T08:05:00.000Z"
+    },
+    {
+      "id": "chr-peiwujiu",
+      "name": "裴無咎",
+      "alias": "第七席",
+      "role": "追捕者",
+      "faction": "守年人",
+      "age": "33",
+      "tags": "守年人,骨灰墨,信規矩",
+      "summary": "守年人第七席。職責是把骨封存起來——以及把撿到骨的人一起封存。",
+      "story": "守年人只有一條規矩：骨不能碰人，人也不能碰骨。他們把骨灰磨進墨裡，寫在皮膚下，換來一點模糊的既視感，好讓自己認得出世界又倒退了一次。\n\n裴無咎信奉規矩。她追捕過十一個拾骨者，封存過九枚骨，其中兩個人是她親手送進封存室的。\n\n她只見過商嶽一次——在一張比本人年輕的畫像上。",
+      "image": "",
+      "order": 2,
+      "createdAt": "2025-02-01T08:10:00.000Z"
+    },
+    {
+      "id": "chr-tangjiu",
+      "name": "湯九",
+      "alias": "司祭",
+      "role": "反派",
+      "faction": "歸零會",
+      "age": "46",
+      "tags": "歸零會,說話很輕,遞骨頭的人",
+      "summary": "歸零會司祭。主張讓「熵」重新完整，因為只有被讀過的東西才算存在過。",
+      "story": "歸零會不認為自己是毀滅者。他們的說法是：這個世界是一本沒有人讀的書，而熵是唯一的讀者。把牠拆散，等於把書燒掉。\n\n湯九說話很輕，從不強迫任何人。他只是問一句：「你希望你這一生被記住嗎？」然後遞出一枚骨。\n\n十年間，他遞出去三十七枚。每一枚都有人接下。",
+      "image": "",
+      "order": 3,
+      "createdAt": "2025-02-01T08:15:00.000Z"
+    },
+    {
+      "id": "chr-liuwuyi",
+      "name": "柳無衣",
+      "alias": "第 136 迴的兄長",
+      "role": "對照者",
+      "faction": "拾骨者",
+      "age": "41",
+      "tags": "妹妹,倒流,不後悔",
+      "summary": "為了讓妹妹多活一年，他偷了一枚骨。世界因此倒退一年，而妹妹仍然是死的。",
+      "story": "柳無衣原是守年人的抄寫員。妹妹死於第 135 迴的冬天，死因是一場會被下一次倒流抹掉的火災。\n\n他從封存室偷走一枚骨，只許了一個願：再一年就好。世界聽懂了，卻用牠自己的方式理解——整個世界退回一年，妹妹在那一年之後仍然死去。\n\n他不後悔。這是這個故事裡最可怕的地方。",
+      "image": "",
+      "order": 4,
+      "createdAt": "2025-02-01T08:20:00.000Z"
+    },
+    {
+      "id": "chr-azheng",
+      "name": "阿箏",
+      "alias": "巷子裡的人",
+      "role": "謎",
+      "faction": "無年者",
+      "age": "不明（外貌十九）",
+      "tags": "被抹除,同一條巷子,戶籍查無此人",
+      "summary": "每一次倒流都會被抹掉的人，卻每一次都在同一條巷子裡出現。",
+      "story": "第 135 迴，柳無衣的妹妹死於一場火災。第 136 迴，那場火沒有發生——她也從未出生。\n\n阿箏不記得自己有名字。她只知道要待在這條巷子裡，等一個不會來的人。天氣好的時候她數地磚，數到第七百六十四塊就重新數。\n\n沒有人查得到她的戶籍。裴無咎追了她三年，檔案裡始終只有一行字：查無此人。",
+      "image": "",
+      "order": 5,
+      "createdAt": "2025-02-01T08:25:00.000Z"
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel-1",
+      "fromId": "chr-shangyue",
+      "toId": "chr-yanzhu",
+      "type": "師徒",
+      "note": "他找到她的第一天只說了一句：「別讓年把你帶走。」",
+      "order": 0,
+      "createdAt": "2025-02-01T09:00:00.000Z"
+    },
+    {
+      "id": "rel-2",
+      "fromId": "chr-yanzhu",
+      "toId": "chr-azheng",
+      "type": "摯友",
+      "note": "全世界只有嚴筑看得到她——因為嚴筑記得被抹掉的東西。",
+      "order": 1,
+      "createdAt": "2025-02-01T09:01:00.000Z"
+    },
+    {
+      "id": "rel-3",
+      "fromId": "chr-yanzhu",
+      "toId": "chr-liuwuyi",
+      "type": "敵對",
+      "note": "兩個拾骨者，兩種答案：她想把骨還回去，他想再倒流一次。",
+      "order": 2,
+      "createdAt": "2025-02-01T09:02:00.000Z"
+    },
+    {
+      "id": "rel-4",
+      "fromId": "chr-yanzhu",
+      "toId": "chr-peiwujiu",
+      "type": "其他",
+      "note": "追捕者與獵物。裴無咎第一次猶豫，是因為嚴筑叫出了她的名字——她從沒說過。",
+      "order": 3,
+      "createdAt": "2025-02-01T09:03:00.000Z"
+    },
+    {
+      "id": "rel-5",
+      "fromId": "chr-tangjiu",
+      "toId": "chr-liuwuyi",
+      "type": "同盟",
+      "note": "湯九只問了他一句話，柳無衣就收下了那枚骨。",
+      "order": 4,
+      "createdAt": "2025-02-01T09:04:00.000Z"
+    },
+    {
+      "id": "rel-6",
+      "fromId": "chr-peiwujiu",
+      "toId": "chr-tangjiu",
+      "type": "敵對",
+      "note": "她手上有一份名單，三十七個名字，全部是最後一次有人看見他的那天。",
+      "order": 5,
+      "createdAt": "2025-02-01T09:05:00.000Z"
+    },
+    {
+      "id": "rel-7",
+      "fromId": "chr-shangyue",
+      "toId": "chr-tangjiu",
+      "type": "敵對",
+      "note": "湯九叫牠「讀者」。商嶽聽過牠在拆骨之前的聲音，他知道那不是讀者。",
+      "order": 6,
+      "createdAt": "2025-02-01T09:06:00.000Z"
+    },
+    {
+      "id": "rel-8",
+      "fromId": "chr-peiwujiu",
+      "toId": "chr-shangyue",
+      "type": "其他",
+      "note": "守年人的檔案裡，他是一張 764 年前的畫像。畫像上的人比她年輕。",
+      "order": 7,
+      "createdAt": "2025-02-01T09:07:00.000Z"
+    },
+    {
+      "id": "rel-9",
+      "fromId": "chr-azheng",
+      "toId": "chr-liuwuyi",
+      "type": "親屬",
+      "note": "他不認得她。她認得他——她記得有一年冬天，有人替她蓋過被子。",
+      "order": 8,
+      "createdAt": "2025-02-01T09:08:00.000Z"
+    }
+  ],
+  "stories": [
+    {
+      "id": "st-1",
+      "title": "拆骨之夜",
+      "body": "牠從來沒有「出現」過。牠只是把影子投在天空上，然後整座城的鐘都停了。\n\n五個人站在影子的正下方。有人負責撕開維度，有人負責在撕開的縫裡撐住三秒，有人負責把牠拆開。\n\n拆得開，但殺不死。所以他們沒有殺——他們分。把牠拆成七百六十四塊，每一塊都塞進一條命裡，讓時間替他們背著。\n\n隊伍最後點名時，站著的只有一個人。他胸口嵌著一塊，拔不出來。\n\n> 「你們把牠分給了時間。」\n> 「時間不欠任何人。」",
+      "characters": "chr-shangyue",
+      "tags": "起點,拆骨之夜,七百六十四",
+      "order": 0,
+      "createdAt": "2025-02-02T10:00:00.000Z"
+    },
+    {
+      "id": "st-2",
+      "title": "既視感的城市",
+      "body": "第 137 迴的秋天，城裡的人普遍覺得今年過得特別快，又特別熟悉。\n\n賣麵的老闆說他今年已經是第三次夢見同一個客人站在攤前不點東西。公車司機說有一段路他閉著眼睛都能開——他確實閉過。\n\n嚴筑在這些話裡畫地圖。她把那條不存在的巷子畫在城西，畫了三遍，每一遍位置都差一點。\n\n阿箏在那條巷子裡數地磚，數到第七百六十四塊，抬頭看見一個畫圖的人站在巷口。\n\n「你看得到我。」\n\n「我一直看得到。」",
+      "characters": "chr-yanzhu,chr-azheng",
+      "tags": "第137迴,既視感,巷子",
+      "order": 1,
+      "createdAt": "2025-02-02T10:10:00.000Z"
+    },
+    {
+      "id": "st-3",
+      "title": "一個兄長的願望",
+      "body": "第 135 迴的冬天，柳無衣的妹妹死在一場火裡。\n\n第 136 迴，他從封存室偷走一枚骨。他沒有要世界，只想要一年——一個能替她蓋被子的冬天。\n\n世界聽懂了，用牠自己的方式：整條時間線退回一年。火沒有燒起來，因為那一年根本還沒走到那裡。妹妹沒有死於火，因為她還沒有出生。\n\n他守著一個空房間過了第 136 迴。\n\n第 137 迴，巷子裡出現了一個不記得自己名字的女孩，數著地磚等他。",
+      "characters": "chr-liuwuyi,chr-azheng",
+      "tags": "第136迴,願望,代價",
+      "order": 2,
+      "createdAt": "2025-02-02T10:20:00.000Z"
+    },
+    {
+      "id": "st-4",
+      "title": "守年人規矩第七條",
+      "body": "守年人的封存室在地下第七層，門上貼著七條規矩。\n\n第七條寫的是：**若骨已與人相連，連人一同封存。**\n\n裴無咎問過教她的老人：如果那個人是被騙的呢？\n\n老人說：那他就是第二個把骨拿走的人，而不是第一個。\n\n三年後她在城南找到一個叫嚴筑的製圖匠。她照規矩辦事，把封存室的鑰匙拿出來，然後聽見對方說：「裴無咎，你去年也是這樣站在這裡。」\n\n那句話不在任何檔案裡。",
+      "characters": "chr-peiwujiu,chr-yanzhu",
+      "tags": "守年人,規矩,第一次猶豫",
+      "order": 3,
+      "createdAt": "2025-02-02T10:30:00.000Z"
+    }
+  ]
+}

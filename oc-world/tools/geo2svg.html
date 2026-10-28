@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>地圖資料 → SVG（GeoJSON / OSM / SHP）</title>
+<style>
+  :root{
+    --accent:#2f7f9e;--warm:#d9762f;--stamp:#b4342a;
+    --ink:#14202a;--ink-soft:#3d4f5c;--muted:#7b8b96;
+    --line:#d9e1e6;--line-soft:#eaf0f2;--paper:#f3f6f7;--card:#fff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --serif:"Songti TC","Noto Serif TC",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper);color:var(--ink);overflow-y:auto;padding-bottom:3rem;
+    font:16px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:28px 20px}
+  h1{font-family:var(--serif);font-size:25px;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+  h2{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+     margin:26px 0 10px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .drop{
+    border:1.5px dashed var(--line);border-radius:10px;background:#fff;
+    padding:30px 20px;text-align:center;cursor:pointer;transition:.18s;
+  }
+  .drop:hover,.drop.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 4%,#fff)}
+  .drop b{display:block;font-size:14px;margin-bottom:5px}
+  .drop span{font-size:12.5px;color:var(--muted);line-height:1.7}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0}
+  button{
+    font:inherit;font-size:13px;font-weight:600;padding:7px 15px;border-radius:5px;
+    border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:.15s;
+  }
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{filter:brightness(1.08);color:#fff}
+  button.warm{background:#fff;border-color:color-mix(in srgb,var(--warm) 50%,#fff);color:var(--warm)}
+  button.warm:hover{background:color-mix(in srgb,var(--warm) 7%,#fff);border-color:var(--warm);color:var(--warm)}
+  button:disabled{opacity:.45;cursor:default}
+  label.chk{font-size:12.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+  input[type=checkbox]{accent-color:var(--accent)}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:4px;margin-top:14px}
+  .panel svg{width:100%;height:auto;display:block;border-radius:6px}
+  .log{
+    font-family:var(--mono);font-size:11.5px;color:var(--muted);
+    background:#fff;border:1px solid var(--line);border-radius:6px;
+    padding:9px 12px;margin-top:12px;white-space:pre-wrap;line-height:1.7;
+    max-height:220px;overflow:auto;
+  }
+  .log b{color:var(--ink)}
+  .log .err{color:var(--stamp)}
+  .hint{
+    margin-top:20px;padding:13px 15px;border-left:3px solid var(--warm);
+    background:color-mix(in srgb,var(--warm) 5%,#fff);border-radius:0 6px 6px 0;
+    font-size:12.5px;color:var(--ink-soft);line-height:1.85;
+  }
+  .hint b{color:var(--ink)}
+  .hint code{font-family:var(--mono);font-size:11.5px;background:var(--line-soft);padding:1px 5px;border-radius:3px}
+  .num{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .opts{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>地圖資料 → SVG</h1>
+  <p class="sub">支援 GeoJSON、OSM XML、Shapefile（含 zip），或直接從 OpenStreetMap 抓香港海岸線／18 區邊界。輸出 1200×840（10:7）。</p>
+
+  <h2>① 選一個檔案</h2>
+  <div class="drop" id="drop">
+    <b>拖進來，或點這裡選檔</b>
+    <span>
+      <code>.geojson</code> <code>.json</code> ・ <code>.osm</code> <code>.xml</code> ・ <code>.shp</code> <code>.zip</code>（含 shp/dbf）<br>
+      OpenStreetMap XML、Overpass JSON、Geofabrik 的 shp.zip 都可以直接讀
+    </span>
+    <input type="file" id="file" accept=".json,.geojson,.osm,.xml,.shp,.zip" hidden>
+  </div>
+
+  <h2>② 或直接連線下載（不用找檔案）</h2>
+  <div class="row">
+    <button class="warm" id="fetchCoast">抓香港海岸線（最細）</button>
+    <button class="warm" id="fetchDistricts">抓香港 18 區邊界（含區名）</button>
+  </div>
+  <p class="sub" style="margin-top:-4px">透過 Overpass API 即時查詢，第一次可能要等 10–60 秒。資料 © OpenStreetMap contributors（ODbL）。</p>
+
+  <h2>③ 產生</h2>
+  <div class="opts">
+    <label class="chk"><input type="checkbox" id="fixedBox" checked> 使用香港固定範圍（113.83–114.45°E / 22.14–22.56°N）</label>
+    <label class="chk"><input type="checkbox" id="showNames" checked> 標註區名／地名</label>
+  </div>
+  <div class="row">
+    <button class="primary" id="build" disabled>產生地圖</button>
+    <button id="download" disabled>下載 SVG</button>
+    <button id="apply" disabled>設為網站地圖底圖</button>
+    <span class="num" id="stat"></span>
+  </div>
+
+  <div class="panel" id="panel">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 840" width="1200" height="840">
+      <rect width="1200" height="840" fill="#e4eff5"/>
+      <text x="600" y="420" text-anchor="middle" font-family="ui-monospace,monospace" font-size="14" fill="#7b8b96">尚未載入資料</text>
+    </svg>
+  </div>
+
+  <div class="log" id="log">等待資料…</div>
+
+  <div class="hint">
+    <b>格式支援說明</b><br>
+    ✅ <b>GeoJSON</b>：DATA.GOV.HK 的 18 區 JSON、bmkor/hk_osm_map 的 <code>Hong_Kong.geojson</code>。<br>
+    ✅ <b>OSM XML</b>：openstreetmap.org「Export」下載的 <code>.osm</code>；會自動把海岸線／閉合 way 串成多邊形。<br>
+    ✅ <b>Shapefile</b>：單一 <code>.shp</code>，或 Geofabrik 的 <code>-free.shp.zip</code>（自動讀 shp＋dbf 取區名，座標需為 WGS84）。<br>
+    ❌ <b>.osm.pbf</b>（二進位）：瀏覽器端不支援。請先在 <a href="https://overpass-turbo.eu/" target="_blank" rel="noreferrer">overpass-turbo</a> 匯出 GeoJSON，或用 <code>osmium cat x.osm.pbf -o x.osm</code> 轉檔。
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════
+   地圖資料 → SVG
+   輸入：GeoJSON / OSM XML / Shapefile(zip) / Overpass JSON
+   輸出：1200×840 SVG（與網站地圖頁同風格同比例）
+   ═══════════════════════════════════════════ */
+
+var HK_BOX = { minLon: 113.83, maxLon: 114.45, minLat: 22.14, maxLat: 22.56 };
+var W = 1200, H = 840;
+var $ = function (id) { return document.getElementById(id); };
+
+var state = { polys: [], svg: "" };
+
+/* ── 小工具 ─────────────────────────────── */
+function log(html) { $("log").innerHTML = html; }
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+  });
+}
+function samePt(a, b) { return Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(a[1] - b[1]) < 1e-6; }
+
+/* 把零散的線段／way 串成閉合環 */
+function stitchRings(list) {
+  var pool = list.map(function (r) { return r.slice(); }).filter(function (r) { return r.length >= 2; });
+  var rings = [];
+  var guard = 0;
+  while (pool.length && guard++ < 20000) {
+    var ring = pool.shift();
+    var changed = true;
+    while (changed) {
+      changed = false;
+      if (ring.length > 2 && samePt(ring[0], ring[ring.length - 1])) break;
+      var tail = ring[ring.length - 1];
+      for (var i = 0; i < pool.length; i++) {
+        var w = pool[i];
+        if (samePt(w[0], tail)) { ring = ring.concat(w.slice(1)); pool.splice(i, 1); changed = true; break; }
+        if (samePt(w[w.length - 1], tail)) { ring = ring.concat(w.slice(0, -1).reverse()); pool.splice(i, 1); changed = true; break; }
+      }
+    }
+    if (ring.length >= 3) rings.push(ring);
+  }
+  return rings;
+}
+
+function bboxOf(polys) {
+  var b = { minLon: 999, maxLon: -999, minLat: 999, maxLat: -999 };
+  polys.forEach(function (p) {
+    p.rings.forEach(function (ring) {
+      ring.forEach(function (pt) {
+        if (pt[0] < b.minLon) b.minLon = pt[0];
+        if (pt[0] > b.maxLon) b.maxLon = pt[0];
+        if (pt[1] < b.minLat) b.minLat = pt[1];
+        if (pt[1] > b.maxLat) b.maxLat = pt[1];
+      });
+    });
+  });
+  return b;
+}
+
+/* ── 解析：GeoJSON ──────────────────────── */
+function parseGeoJSON(txt) {
+  var geo = JSON.parse(txt);
+  var out = [];
+  function pushPoly(coords, props) {
+    if (coords && coords.length) out.push({ rings: coords, props: props || {} });
+  }
+  function walk(g, props) {
+    if (!g) return;
+    if (g.type === "FeatureCollection") {
+      (g.features || []).forEach(function (f) { walk(f, f.properties || {}); });
+    } else if (g.type === "Feature") {
+      walk(g.geometry, g.properties || props || {});
+    } else if (g.type === "GeometryCollection") {
+      (g.geometries || []).forEach(function (x) { walk(x, props); });
+    } else if (g.type === "Polygon") {
+      pushPoly(g.coordinates, props);
+    } else if (g.type === "MultiPolygon") {
+      (g.coordinates || []).forEach(function (p) { pushPoly(p, props); });
+    } else if (g.type === "LineString" || g.type === "MultiLineString") {
+      pushPoly(g.type === "LineString" ? [g.coordinates] : g.coordinates, props);
+    }
+  }
+  walk(geo, {});
+  return out;
+}
+
+/* ── 解析：Overpass JSON（out geom）─────── */
+function parseOverpass(txt) {
+  var data = JSON.parse(txt);
+  var out = [];
+  (data.elements || []).forEach(function (el) {
+    var name = (el.tags && (el.tags["name:zh-Hant"] || el.tags["name:zh"] || el.tags.name)) || "";
+    var props = { name: name, tags: el.tags || {} };
+
+    if (el.type === "way" && el.geometry) {
+      var coords = el.geometry.filter(Boolean).map(function (g) { return [g.lon, g.lat]; });
+      if (coords.length >= 2) {
+        out.push({ rings: [coords], props: props, _way: true });
+      }
+    } else if (el.type === "relation" && el.members) {
+      var segs = [];
+      el.members.forEach(function (m) {
+        if (m.type === "way" && m.geometry) {
+          var c = m.geometry.filter(Boolean).map(function (g) { return [g.lon, g.lat]; });
+          if (c.length >= 2) segs.push(c);
+        }
+      });
+      if (segs.length) out.push({ rings: segs, props: props, _ring: true });
+    }
+  });
+
+  /* 把 way 段落串起來；relation 的多段也串 */
+  var polys = [];
+  var looseWays = [];
+  out.forEach(function (p) {
+    if (p._ring) {
+      stitchRings(p.rings).forEach(function (r) { polys.push({ rings: [r], props: p.props }); });
+    } else {
+      looseWays.push(p);
+    }
+  });
+  if (looseWays.length) {
+    var grouped = looseWays.filter(function (p) { return !p.props.name; });
+    var named = looseWays.filter(function (p) { return p.props.name; });
+    // 有名稱的各自視為獨立地物
+    named.forEach(function (p) {
+      stitchRings(p.rings).forEach(function (r) { polys.push({ rings: [r], props: p.props }); });
+    });
+    // 無名稱的（例如海岸線）串成環
+    var segs = [];
+    grouped.forEach(function (p) { p.rings.forEach(function (r) { segs.push(r); }); });
+    stitchRings(segs).forEach(function (r) { polys.push({ rings: [r], props: {} }); });
+  }
+  return polys;
+}
+
+/* ── 解析：OSM XML ──────────────────────── */
+function parseOSMXML(txt) {
+  var doc = new DOMParser().parseFromString(txt, "text/xml");
+  if (doc.querySelector("parsererror")) throw new Error("XML 解析失敗");
+
+  var nodes = {};
+  var nodeList = doc.getElementsByTagName("node");
+  for (var i = 0; i < nodeList.length; i++) {
+    var n = nodeList[i];
+    nodes[n.getAttribute("id")] = [parseFloat(n.getAttribute("lon")), parseFloat(n.getAttribute("lat"))];
+  }
+
+  var ways = [];
+  var wayList = doc.getElementsByTagName("way");
+  for (var j = 0; j < wayList.length; j++) {
+    var w = wayList[j];
+    var coords = [];
+    var nds = w.getElementsByTagName("nd");
+    for (var k = 0; k < nds.length; k++) {
+      var ref = nodes[nds[k].getAttribute("ref")];
+      if (ref) coords.push(ref);
+    }
+    if (coords.length < 2) continue;
+    var tags = {};
+    var ts = w.getElementsByTagName("tag");
+    for (var t = 0; t < ts.length; t++) tags[ts[t].getAttribute("k")] = ts[t].getAttribute("v");
+    ways.push({ coords: coords, tags: tags });
+  }
+
+  var coast = ways.filter(function (x) { return x.tags.natural === "coastline"; });
+  var pool = coast.length ? coast : ways.filter(function (x) { return samePt(x.coords[0], x.coords[x.coords.length - 1]); });
+  if (!pool.length) pool = ways;   // 最後手段：全部串起來
+
+  var rings = stitchRings(pool.map(function (x) { return x.coords; }));
+  return rings.map(function (r) { return { rings: [r], props: {} }; });
+}
+
+/* ── 解析：Shapefile（.shp [+ .dbf]）─────── */
+function readSHP(buf) {
+  var dv = new DataView(buf);
+  if (dv.getInt32(0, false) !== 9994) throw new Error("不是有效的 .shp");
+  var pos = 100;
+  var polys = [];
+  while (pos + 8 <= dv.byteLength) {
+    var contentLen = dv.getInt32(pos + 4, false) * 2;
+    var body = pos + 8;
+    if (body + 4 > dv.byteLength) break;
+    var shapeType = dv.getInt32(body, true);
+    if (shapeType === 5 || shapeType === 15) {
+      var numParts = dv.getInt32(body + 36, true);
+      var numPoints = dv.getInt32(body + 40, true);
+      var partsOff = body + 44;
+      var ptsOff = partsOff + numParts * 4;
+      var parts = [];
+      for (var i = 0; i < numParts; i++) parts.push(dv.getInt32(partsOff + i * 4, true));
+      var pts = [];
+      for (var j = 0; j < numPoints; j++) {
+        pts.push([dv.getFloat64(ptsOff + j * 16, true), dv.getFloat64(ptsOff + j * 16 + 8, true)]);
+      }
+      var rings = [];
+      for (var p = 0; p < parts.length; p++) {
+        var start = parts[p];
+        var end = p + 1 < parts.length ? parts[p + 1] : numPoints;
+        var ring = pts.slice(start, end);
+        if (ring.length >= 3) rings.push(ring);
+      }
+      if (rings.length) polys.push({ rings: rings, props: {} });
+    }
+    pos = body + contentLen;
+  }
+  return polys;
+}
+
+function readDBF(buf, polyCount) {
+  var dv = new DataView(buf);
+  var numRecords = dv.getUint32(4, true);
+  var headerLen = dv.getUint16(8, true);
+  var recordLen = dv.getUint16(10, true);
+  var decoder = new TextDecoder("utf-8");
+
+  var fields = [];
+  var off = 32;
+  while (off + 32 <= headerLen && dv.getUint8(off) !== 0x0D) {
+    var nameBytes = [];
+    for (var i = 0; i < 11; i++) {
+      var b = dv.getUint8(off + i);
+      if (b === 0) break;
+      nameBytes.push(b);
+    }
+    fields.push({
+      name: decoder.decode(new Uint8Array(nameBytes)),
+      len: dv.getUint8(off + 16)
+    });
+    off += 32;
+  }
+
+  var nameField = null;
+  var prefer = ["NAME_TC", "name_tc", "NAME_TC_1", "NAME", "NAME_EN", "name", "District", "DISTRICT"];
+  for (var k = 0; k < prefer.length && !nameField; k++) {
+    for (var f = 0; f < fields.length; f++) {
+      if (fields[f].name.toUpperCase() === prefer[k].toUpperCase()) { nameField = fields[f]; break; }
+    }
+  }
+  if (!nameField) {
+    for (var g = 0; g < fields.length; g++) {
+      if (/name|district|名稱|區/i.test(fields[g].name)) { nameField = fields[g]; break; }
+    }
+  }
+
+  var names = [];
+  if (!nameField) return names;
+
+  for (var r = 0; r < Math.min(numRecords, polyCount); r++) {
+    var recOff = headerLen + r * recordLen + 1;
+    var nameOff = recOff;
+    for (var m = 0; m < fields.length; m++) {
+      if (fields[m] === nameField) break;
+      nameOff += fields[m].len;
+    }
+    var bytes = [];
+    for (var n = 0; n < nameField.len; n++) {
+      var v = dv.getUint8(nameOff + n);
+      if (v !== 0 && v !== 32) bytes.push(v);
+      else if (v === 32) bytes.push(v);
+    }
+    names.push(decoder.decode(new Uint8Array(bytes)).trim());
+  }
+  return names;
+}
+
+/* ── 解析：ZIP（抓 .shp / .dbf）─────────── */
+function findEOCD(dv) {
+  for (var i = dv.byteLength - 22; i >= 0 && i > dv.byteLength - 66000; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) return i;
+  }
+  return -1;
+}
+
+function unzip(buf) {
+  var dv = new DataView(buf);
+  var eocd = findEOCD(dv);
+  if (eocd < 0) throw new Error("不是有效的 zip");
+  var count = dv.getUint16(eocd + 10, true);
+  var cdOff = dv.getUint32(eocd + 16, true);
+
+  var entries = [];
+  var p = cdOff;
+  for (var i = 0; i < count; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    var method = dv.getUint16(p + 10, true);
+    var compSize = dv.getUint32(p + 20, true);
+    var nameLen = dv.getUint16(p + 28, true);
+    var extraLen = dv.getUint16(p + 30, true);
+    var commentLen = dv.getUint16(p + 32, true);
+    var localOff = dv.getUint32(p + 42, true);
+    var nameBytes = new Uint8Array(buf, p + 46, nameLen);
+    var name = new TextDecoder("utf-8").decode(nameBytes);
+    entries.push({ name: name, method: method, compSize: compSize, localOff: localOff });
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+
+  function extract(entry) {
+    var lp = entry.localOff;
+    var nameLen = dv.getUint16(lp + 26, true);
+    var extraLen = dv.getUint16(lp + 28, true);
+    var dataOff = lp + 30 + nameLen + extraLen;
+    var raw = buf.slice(dataOff, dataOff + entry.compSize);
+    if (entry.method === 0) return Promise.resolve(raw);
+    if (typeof DecompressionStream === "undefined") {
+      return Promise.reject(new Error("此瀏覽器不支援解壓（需要 DecompressionStream），請改用單一 .shp 檔"));
+    }
+    var ds = new DecompressionStream("deflate-raw");
+    var stream = new Blob([raw]).stream().pipeThrough(ds);
+    return new Response(stream).arrayBuffer();
+  }
+
+  return { entries: entries, extract: extract };
+}
+
+/* ── 主入口：依副檔名分派 ───────────────── */
+function handleFile(file) {
+  var name = (file.name || "").toLowerCase();
+  log("讀取 <b>" + esc(file.name) + "</b>（" + (file.size / 1024).toFixed(0) + " KB）…");
+
+  /* ── zip ── */
+  if (/\.zip$/.test(name)) {
+    var zr = new FileReader();
+    zr.onload = function () {
+      try {
+        var buf = zr.result;
+        var z = unzip(buf);
+        var shpEntry = z.entries.filter(function (e) { return /\.shp$/i.test(e.name); })[0];
+        var dbfEntry = z.entries.filter(function (e) { return /\.dbf$/i.test(e.name); })[0];
+        if (!shpEntry) { log('<span class="err">zip 裡找不到 .shp</span>'); return; }
+        log("解壓 <b>" + esc(shpEntry.name) + "</b> …");
+        z.extract(shpEntry).then(function (shpBuf) {
+          var polys = readSHP(shpBuf);
+          if (dbfEntry) {
+            return z.extract(dbfEntry).then(function (dbfBuf) {
+              try {
+                var names = readDBF(dbfBuf, polys.length);
+                polys.forEach(function (p, i) { if (names[i]) p.props.name = names[i]; });
+              } catch (e) { /* 名稱讀不到就算了 */ }
+              return polys;
+            });
+          }
+          return polys;
+        }).then(success).catch(fail);
+      } catch (err) { fail(err); }
+    };
+    zr.readAsArrayBuffer(file);
+    return;
+  }
+
+  /* ── shp 單檔 ── */
+  if (/\.shp$/.test(name)) {
+    var sr = new FileReader();
+    sr.onload = function () {
+      try { success(readSHP(sr.result)); } catch (err) { fail(err); }
+    };
+    sr.readAsArrayBuffer(file);
+    return;
+  }
+
+  /* ── 文字類：geojson / json / osm / xml ── */
+  var tr = new FileReader();
+  tr.onload = function () {
+    var txt = String(tr.result).replace(/^\uFEFF/, "");
+    var polys = [];
+    try {
+      var isXML = /\.(osm|xml)$/.test(name) || /^\s*<(\?xml|osm)/.test(txt.slice(0, 200));
+      if (isXML) {
+        polys = parseOSMXML(txt);
+      } else {
+        var trimmed = txt.trim();
+        if (/^\s*\{/.test(trimmed) && /"elements"\s*:/.test(trimmed)) polys = parseOverpass(trimmed);
+        else polys = parseGeoJSON(trimmed);
+      }
+      success(polys);
+    } catch (err) { fail(err); }
+  };
+  tr.readAsText(file);
+}
+
+function success(polys) {
+  if (!polys || !polys.length) {
+    log('<span class="err">解析後沒有多邊形</span>：這份資料可能只有點或線，或者 way 無法串成閉合環。');
+    return;
+  }
+  state.polys = polys;
+  state.svg = "";
+  $("build").disabled = false;
+  $("download").disabled = true;
+  $("apply").disabled = true;
+
+  var b = bboxOf(polys);
+  var named = polys.filter(function (p) { return p.props && p.props.name; }).length;
+  log("<b>已載入</b>：" + polys.length + " 個多邊形" + (named ? "（" + named + " 個有名字）" : "") +
+    "\n範圍：經 " + b.minLon.toFixed(3) + "–" + b.maxLon.toFixed(3) +
+    " / 緯 " + b.minLat.toFixed(3) + "–" + b.maxLat.toFixed(3) +
+    "\n按「產生地圖」。");
+  $("build").click();
+}
+
+function fail(err) {
+  log('<span class="err">失敗：' + esc((err && err.message) || err) + "</span>");
+}
+
+/* ── 投影與輸出 ─────────────────────────── */
+function makeProject(box) {
+  var padLon = (box.maxLon - box.minLon) * 0.02;
+  var padLat = (box.maxLat - box.minLat) * 0.02;
+  var minLon = box.minLon - padLon, maxLon = box.maxLon + padLon;
+  var minLat = box.minLat - padLat, maxLat = box.maxLat + padLat;
+  var s = Math.min(W / (maxLon - minLon), H / (maxLat - minLat));
+  var offX = (W - (maxLon - minLon) * s) / 2;
+  var offY = (H - (maxLat - minLat) * s) / 2;
+  return function (lon, lat) {
+    return [offX + (lon - minLon) * s, offY + (maxLat - lat) * s];
+  };
+}
+
+function ringPath(ring, proj) {
+  var d = "";
+  for (var i = 0; i < ring.length; i++) {
+    var p = proj(ring[i][0], ring[i][1]);
+    d += (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1);
+  }
+  return d + "Z";
+}
+
+function pickName(props) {
+  if (!props) return "";
+  if (props.name) return props.name;
+  var keys = ["NAME_TC", "name_tc", "NAME", "NAME_EN", "name", "District", "district", "名稱"];
+  for (var i = 0; i < keys.length; i++) {
+    if (props[keys[i]] && String(props[keys[i]]).trim()) return String(props[keys[i]]).trim();
+  }
+  return "";
+}
+
+function buildSVG(polys, opts) {
+  var box = opts.fixed ? HK_BOX : bboxOf(polys);
+  var proj = makeProject(box);
+  var o = [];
+  o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 840" width="1200" height="840" role="img" aria-label="地圖">');
+  o.push('<defs>');
+  o.push('<pattern id="g100" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="#b9cede" stroke-width="0.7" opacity="0.5"/></pattern>');
+  o.push('<pattern id="g20" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="#c9dae6" stroke-width="0.3" opacity="0.4"/></pattern>');
+  o.push('<pattern id="seaHatch" width="26" height="14" patternUnits="userSpaceOnUse"><path d="M0 10 q6.5 -4 13 0 t13 0" fill="none" stroke="#a9c3d2" stroke-width="0.7" opacity="0.38"/></pattern>');
+  o.push('<linearGradient id="landG" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#fdfbf5"/><stop offset="60%" stop-color="#f6f1e4"/><stop offset="100%" stop-color="#eee7d6"/></linearGradient>');
+  o.push('<filter id="paperTex" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="11" result="n"/><feColorMatrix in="n" type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.07"/></feComponentTransfer><feComposite in2="SourceGraphic" operator="over"/></filter>');
+  o.push('</defs>');
+
+  o.push('<rect width="1200" height="840" fill="#e4eff5"/>');
+  o.push('<rect width="1200" height="840" fill="url(#seaHatch)"/>');
+  o.push('<rect width="1200" height="840" fill="url(#g20)"/>');
+  o.push('<rect width="1200" height="840" fill="url(#g100)"/>');
+
+  o.push('<g fill="url(#landG)" stroke="#465d69" stroke-width="0.9" stroke-linejoin="round" fill-rule="evenodd">');
+  polys.forEach(function (p) {
+    o.push('<path d="' + p.rings.map(function (r) { return ringPath(r, proj); }).join("") + '"/>');
+  });
+  o.push('</g>');
+
+  if (opts.names) {
+    o.push('<g font-family="\'PingFang TC\',\'Noto Sans TC\',sans-serif" font-size="9.5" fill="#243740" text-anchor="middle" letter-spacing="0.5">');
+    polys.forEach(function (p) {
+      var nm = pickName(p.props);
+      if (!nm) return;
+      var ring = p.rings[0];
+      var sx = 0, sy = 0, n = 0;
+      for (var i = 0; i < ring.length - 1; i++) {
+        var q = proj(ring[i][0], ring[i][1]);
+        sx += q[0]; sy += q[1]; n++;
+      }
+      if (!n) return;
+      o.push('<text x="' + (sx / n).toFixed(1) + '" y="' + (sy / n).toFixed(1) +
+        '" paint-order="stroke" stroke="#fdfbf5" stroke-width="3" stroke-linejoin="round">' + esc(nm) + "</text>");
+    });
+    o.push('</g>');
+  }
+
+  o.push('<rect x="26" y="26" width="1148" height="788" fill="none" stroke="#7c95a2" stroke-width="1.4"/>');
+  o.push('<rect x="34" y="34" width="1132" height="772" fill="none" stroke="#7c95a2" stroke-width="0.5" stroke-dasharray="7 7"/>');
+  o.push('<g transform="translate(1108,730)" opacity="0.9"><circle r="34" fill="none" stroke="#7c95a2" stroke-width="0.9"/><circle r="24" fill="none" stroke="#7c95a2" stroke-width="0.4" stroke-dasharray="2 5"/><path d="M0-30 L7-5 L0 0 L-7-5 Z" fill="#b4342a"/><path d="M0 30 L7 5 L0 0 L-7 5 Z" fill="#3f5561" opacity="0.45"/><text y="-40" text-anchor="middle" font-family="Georgia,serif" font-size="11" fill="#243740">N</text></g>');
+  o.push('<g transform="translate(64,770)" opacity="0.85"><rect x="0" y="0" width="48" height="5" fill="#3f5561"/><rect x="48" y="0" width="48" height="5" fill="#fdfbf5" stroke="#3f5561" stroke-width="0.7"/><rect x="96" y="0" width="48" height="5" fill="#3f5561"/><text x="0" y="19" font-family="ui-monospace,monospace" font-size="8.5" fill="#3f5561">0</text><text x="144" y="19" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#3f5561">10 km</text></g>');
+  o.push('<g transform="translate(58,88)"><text font-family="\'Songti TC\',\'Noto Serif TC\',serif" font-size="27" fill="#1d2f39" letter-spacing="9">香港</text><text y="20" font-family="ui-monospace,monospace" font-size="9" letter-spacing="2.5" fill="#6b8290">HONG KONG · OPEN DATA</text></g>');
+  o.push('<rect width="1200" height="840" filter="url(#paperTex)" fill="none" pointer-events="none"/>');
+  o.push('</svg>');
+  return o.join("");
+}
+
+/* ── Overpass 直接抓取 ──────────────────── */
+var OVERPASS = "https://overpass-api.de/api/interpreter";
+
+function overpass(query) {
+  var url = OVERPASS + "?data=" + encodeURIComponent(query);
+  return fetch(url, { method: "GET" }).then(function (res) {
+    if (!res.ok) throw new Error("Overpass 回應 " + res.status);
+    return res.text();
+  });
+}
+
+function fetchCoast() {
+  log("向 Overpass 查詢香港海岸線…（可能要 10–60 秒）");
+  var q = '[out:json][timeout:180];way["natural"="coastline"](22.14,113.83,22.56,114.45);out geom;';
+  overpass(q).then(function (txt) {
+    var polys = parseOverpass(txt);
+    success(polys);
+  }).catch(function (err) {
+    log('<span class="err">查詢失敗：' + esc((err && err.message) || err) +
+      "</span>\n可以改到 overpass-turbo.eu 手動匯出 GeoJSON。");
+  });
+}
+
+function fetchDistricts() {
+  log("向 Overpass 查詢香港 18 區邊界…（可能要 10–60 秒）");
+  var q = '[out:json][timeout:180];relation["boundary"="administrative"]["admin_level"="6"](22.14,113.83,22.56,114.45);out geom;';
+  overpass(q).then(function (txt) {
+    var polys = parseOverpass(txt);
+    success(polys);
+  }).catch(function (err) {
+    log('<span class="err">查詢失敗：' + esc((err && err.message) || err) +
+      "</span>\n可以改到 overpass-turbo.eu 手動匯出 GeoJSON。");
+  });
+}
+
+/* ── 事件綁定 ──────────────────────────── */
+$("drop").addEventListener("click", function () { $("file").click(); });
+$("file").addEventListener("change", function (e) { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+["dragenter", "dragover"].forEach(function (ev) {
+  $("drop").addEventListener(ev, function (e) { e.preventDefault(); $("drop").classList.add("on"); });
+});
+["dragleave", "drop"].forEach(function (ev) {
+  $("drop").addEventListener(ev, function (e) { e.preventDefault(); $("drop").classList.remove("on"); });
+});
+$("drop").addEventListener("drop", function (e) {
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+
+$("fetchCoast").addEventListener("click", fetchCoast);
+$("fetchDistricts").addEventListener("click", fetchDistricts);
+
+$("build").addEventListener("click", function () {
+  if (!state.polys.length) return;
+  state.svg = buildSVG(state.polys, { fixed: $("fixedBox").checked, names: $("showNames").checked });
+  $("panel").innerHTML = state.svg;
+  $("download").disabled = false;
+  $("apply").disabled = false;
+  $("stat").textContent = (state.svg.length / 1024).toFixed(1) + " KB SVG";
+});
+
+$("download").addEventListener("click", function () {
+  if (!state.svg) return;
+  var blob = new Blob([state.svg], { type: "image/svg+xml" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "hk-map.svg";
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+  log("已下載 <b>hk-map.svg</b>。\n回到網站地圖頁 → 編輯模式 → 換地圖底圖 → 選這個檔。");
+});
+
+$("apply").addEventListener("click", function () {
+  var sdk = window.spherse;
+  if (!sdk || !sdk.uploadFile) {
+    log("這裡沒有 Spherse 環境，請用<b>下載 SVG</b> 再手動上傳。");
+    return;
+  }
+  if (!state.svg) return;
+  var btn = $("apply");
+  btn.disabled = true;
+  log("上傳中…");
+  var blob = new Blob([state.svg], { type: "image/svg+xml" });
+  sdk.uploadFile({ dirPath: "oc-world/media", name: "hk-map.svg", data: blob })
+    .then(function (res) {
+      var rel = String(res.path || "").replace(/^oc-world\//, "");
+      return sdk.data.mutate({
+        file: "oc-world/data/world.data.json",
+        name: "updateMap",
+        args: { image: rel, note: "香港 · OpenStreetMap 資料" }
+      }).then(function () { return rel; });
+    })
+    .then(function (rel) {
+      log("<b>已設為地圖底圖</b>：" + esc(rel) + "\n回到網站地圖頁重新整理即可看到。");
+      btn.disabled = false;
+    })
+    .catch(function (err) {
+      log('<span class="err">失敗：' + esc((err && err.message) || err) + "</span>\n可改用「下載 SVG」再手動上傳。");
+      btn.disabled = false;
+    });
+});
+</script>
+</body>
+</html>

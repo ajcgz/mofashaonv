@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OC 世界觀</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<!-- 宿命層：紙紋、暗角、邊界線、頁首刻度 -->
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="margin-rule" aria-hidden="true"></div>
+<div class="rewind-band" aria-hidden="true"><i></i></div>
+<div class="curtain" id="curtain" aria-hidden="true"><span>載入檔案</span></div>
+
+<header class="topbar">
+  <a class="brand" href="#/"><span class="brand-mark"></span><span id="brandName">OC 世界觀</span></a>
+  <nav class="nav" id="nav">
+    <a href="#/" data-view="home">總覽</a>
+    <a href="#/characters" data-view="characters">人物</a>
+    <a href="#/graph" data-view="graph">關係圖</a>
+    <a href="#/timeline" data-view="timeline">時間綫</a>
+    <a href="#/map" data-view="map">地圖</a>
+    <a href="#/gallery" data-view="gallery">畫廊</a>
+    <a href="#/stories" data-view="stories">故事</a>
+  </nav>
+  <div class="top-actions">
+    <span class="hud" id="hud"></span>
+    <span class="ro-tag" id="roTag" hidden>唯讀發佈版</span>
+    <button id="editToggle" class="btn" hidden>編輯模式</button>
+  </div>
+</header>
+
+<main id="view" class="view">
+  <div class="loading">讀取中…</div>
+</main>
+
+<div id="modalHost"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<input id="fileInput" type="file" accept="image/*" hidden>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
