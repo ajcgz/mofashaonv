@@ -1,8 +1,58 @@
 {
   "$manifest": {
     "version": 1,
-    "desc": "OC 世界觀資料：world（世界設定）、characters（人物）、relations（人物關係）、stories（背景故事）、places（地圖標點）、events（時間綫節點）、gallery（畫廊）、map（地圖底圖）",
+    "desc": "OC 世界觀資料：world / characters / relations / stories / places / events / gallery / entries（百科詞條）/ music（版面音樂）/ map",
     "queries": {
+      "listMusic": {
+        "desc": "查看音樂清單，可按版面過濾（page：all 或 home/characters/graph/timeline/map/gallery/wiki/stories）",
+        "path": "music",
+        "identity": "id",
+        "params": {
+          "page": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "field"
+          },
+          "dir": {
+            "type": "enum",
+            "values": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        "defaultLimit": 100
+      },
+      "listEntries": {
+        "desc": "查看百科詞條，可按分類過濾",
+        "path": "entries",
+        "identity": "id",
+        "params": {
+          "category": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "field"
+          },
+          "dir": {
+            "type": "enum",
+            "values": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          }
+        },
+        "defaultLimit": 200
+      },
+      "getEntry": {
+        "desc": "按 ID 取得單一詞條",
+        "path": "entries",
+        "identity": "id",
+        "defaultLimit": 1
+      },
       "listCharacters": {
         "desc": "查看人物，可按陣營過濾並排序",
         "path": "characters",
@@ -35,7 +85,7 @@
         "defaultLimit": 1
       },
       "listRelations": {
-        "desc": "查看人物關係，可按起點 fromId、終點 toId 或類型過濾",
+        "desc": "查看人物關係",
         "path": "relations",
         "identity": "id",
         "params": {
@@ -159,6 +209,121 @@
       }
     },
     "mutations": {
+      "addMusic": {
+        "desc": "新增版面音樂，page 填 all 或 home/characters/graph/timeline/map/gallery/wiki/stories",
+        "op": "append",
+        "path": "music",
+        "fields": {
+          "title": {
+            "type": "string"
+          },
+          "src": {
+            "type": "string",
+            "required": true
+          },
+          "page": {
+            "type": "string",
+            "default": "all"
+          },
+          "order": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "auto": {
+          "id": "uuid",
+          "createdAt": "nowIso"
+        }
+      },
+      "updateMusic": {
+        "desc": "修改音樂資料，需傳 id",
+        "op": "update",
+        "path": "music",
+        "match": "id",
+        "fields": {
+          "title": {
+            "type": "string"
+          },
+          "src": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          }
+        }
+      },
+      "removeMusic": {
+        "desc": "刪除音樂，需傳 id",
+        "op": "remove",
+        "path": "music",
+        "match": "id"
+      },
+      "addEntry": {
+        "desc": "新增百科詞條，body 內可用 [[詞條名]] 建立內鏈，related 為詞條 id 逗號分隔",
+        "op": "append",
+        "path": "entries",
+        "fields": {
+          "title": {
+            "type": "string",
+            "required": true
+          },
+          "category": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "related": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer",
+            "default": 0
+          }
+        },
+        "auto": {
+          "id": "uuid",
+          "createdAt": "nowIso"
+        }
+      },
+      "updateEntry": {
+        "desc": "修改百科詞條，需傳 id",
+        "op": "update",
+        "path": "entries",
+        "match": "id",
+        "fields": {
+          "title": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "related": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          }
+        }
+      },
+      "removeEntry": {
+        "desc": "刪除百科詞條，需傳 id",
+        "op": "remove",
+        "path": "entries",
+        "match": "id"
+      },
       "updateWorld": {
         "desc": "修改世界設定與主色，只傳要改的欄位",
         "op": "set",
@@ -314,6 +479,33 @@
           "secret": {
             "type": "string"
           },
+          "status": {
+            "type": "string"
+          },
+          "trivia": {
+            "type": "string"
+          },
+          "quotes": {
+            "type": "string"
+          },
+          "bgm": {
+            "type": "string"
+          },
+          "voiceActor": {
+            "type": "string"
+          },
+          "imprintSong": {
+            "type": "string"
+          },
+          "stats": {
+            "type": "string"
+          },
+          "outfits": {
+            "type": "string"
+          },
+          "forms": {
+            "type": "string"
+          },
           "order": {
             "type": "integer",
             "default": 0
@@ -441,6 +633,33 @@
           "secret": {
             "type": "string"
           },
+          "status": {
+            "type": "string"
+          },
+          "trivia": {
+            "type": "string"
+          },
+          "quotes": {
+            "type": "string"
+          },
+          "bgm": {
+            "type": "string"
+          },
+          "voiceActor": {
+            "type": "string"
+          },
+          "imprintSong": {
+            "type": "string"
+          },
+          "stats": {
+            "type": "string"
+          },
+          "outfits": {
+            "type": "string"
+          },
+          "forms": {
+            "type": "string"
+          },
           "order": {
             "type": "integer"
           }
@@ -453,7 +672,7 @@
         "match": "id"
       },
       "addRelation": {
-        "desc": "新增人物關係，fromId 為起點人物、toId 為終點人物",
+        "desc": "新增人物關係",
         "op": "append",
         "path": "relations",
         "fields": {
@@ -532,7 +751,7 @@
         "match": "id"
       },
       "addStory": {
-        "desc": "新增背景故事，characters 為涉及人物 id 的逗號分隔字串",
+        "desc": "新增背景故事",
         "op": "append",
         "path": "stories",
         "fields": {
@@ -550,6 +769,12 @@
             "type": "string"
           },
           "tags": {
+            "type": "string"
+          },
+          "pov": {
+            "type": "string"
+          },
+          "form": {
             "type": "string"
           },
           "order": {
@@ -581,6 +806,12 @@
             "type": "string"
           },
           "tags": {
+            "type": "string"
+          },
+          "pov": {
+            "type": "string"
+          },
+          "form": {
             "type": "string"
           },
           "order": {
@@ -631,7 +862,7 @@
         }
       },
       "updatePlace": {
-        "desc": "修改地點標點（含拖動後的座標），需傳 id",
+        "desc": "修改地點標點，需傳 id",
         "op": "update",
         "path": "places",
         "match": "id",
@@ -666,7 +897,7 @@
         "match": "id"
       },
       "addEvent": {
-        "desc": "新增時間綫節點，order 決定先後",
+        "desc": "新增時間綫節點",
         "op": "append",
         "path": "events",
         "fields": {
@@ -723,7 +954,7 @@
         "match": "id"
       },
       "addGallery": {
-        "desc": "新增畫廊圖片，image 為 media/ 路徑或外部網址",
+        "desc": "新增畫廊圖片",
         "op": "append",
         "path": "gallery",
         "fields": {
@@ -813,7 +1044,7 @@
       "tags": "記憶模糊,美術生,耳機,怕熱,避世",
       "summary": "不太愛講話的命苦美術生。",
       "story": "重生前，梁釔錂是設計師。離職不是為了理想，是因為職場霸凌——辭職之後那段空窗期，她把時間花在經營一個網絡賬號上。\n\n然後世界倒流回 2017 年，回到中四。\n\n問題是她記得的不完整。她記得被霸凌過，記得那種感覺——但記不清到底是什麼事、是誰、為什麼。記憶像被水泡過的紙：字還在，形狀沒了。\n\n她知道有事會發生，但不知道會發生什麼。這比完全不知道更難受。\n\n變身之後她叫「白雨」，形態的靈感是冰雹：頭髮轉成水藍，穿上新中式與洛麗塔混成的裙子。代價是過度嗜睡——打得越多，睡得越久。\n\n她怕熱、怕噪音，所以耳機幾乎不離身。她不喜歡被反覆提起錯處，也不喜歡被說教。\n\n還有一件她從沒跟任何人說過的事：她很討厭被說「獨立」。",
-      "image": "",
+      "image": "media/IMG_3190 (1).jpeg",
       "hair": "變身前黑色長髮；變身後水藍色",
       "eyes": "橙色",
       "outfit": "寬鬆衛衣",
@@ -867,6 +1098,51 @@
       "order": 1,
       "id": "18585cc1-d3f9-4f1c-a76b-674c301f14dd",
       "createdAt": "2026-10-28T09:39:44.508Z"
+    },
+    {
+      "id": "char-zhu-siyao",
+      "name": "祝思姚",
+      "alias": "水手",
+      "role": "主角",
+      "faction": "魔法少女",
+      "age": "16",
+      "birthday": "5月20日",
+      "height": "160cm",
+      "bloodType": "A",
+      "tags": "",
+      "summary": "喜歡亮晶晶的東西，腦子轉得不快，力氣大，喜歡簡單的事物。",
+      "story": "她喜歡亮晶晶的東西，腦子轉得不快，力氣大，喜歡簡單的事物。\n\n第一眼看到她的人，會覺得她聰明、淑女。\n\n她有一個姐姐、一個妹妹。回到 2017 之後，她第一件想改變的事，是阻止妹妹死亡的結局。",
+      "image": "",
+      "hair": "深棕色",
+      "eyes": "藍色",
+      "outfit": "背心",
+      "habit": "撐腰",
+      "keepsake": "",
+      "color": "藍綠色",
+      "transformName": "",
+      "transformLook": "",
+      "ability": "",
+      "abilityLimit": "",
+      "cost": "",
+      "weakPoint": "",
+      "personality": "魯莽、溫柔、善良、悲觀",
+      "strengths": "有力氣",
+      "flaw": "不聰明",
+      "petPeeve": "踩到會拿拳頭揍人",
+      "fear": "飛蛾",
+      "coping": "找一片草地躺下看天空",
+      "firstImpression": "覺得她聰明淑女",
+      "family": "有一個姐姐、一個妹妹。",
+      "pastLife": "2017–2020 爬山、健身、打羽毛球、排球。\n\n生活把她磨平了稜角，她不再衝動做事；力氣還是大，只是平時不招搖。這三年平平淡淡。\n\n受過最大的打擊：被家庭暴力。",
+      "catchphrase": "你想怎樣",
+      "want": "錢",
+      "loseFear": "妹妹",
+      "secret": "她喜歡奧特曼。",
+      "status": "",
+      "trivia": "兩個最好的朋友；敵人是「老師」；認識其他碎片持有者，是可以互相信任的關係；最不想見到的人是前男友。\n\n最想先寫的場景：第一次打反派的戰鬥戲。",
+      "quotes": "我不能輸",
+      "order": 2,
+      "createdAt": "2026-10-28T12:30:00.000Z"
     }
   ],
   "relations": [
@@ -878,20 +1154,29 @@
       "order": 0,
       "id": "f48ccf05-cefe-47bb-a73d-e5d3df12d8ce",
       "createdAt": "2026-10-28T10:16:30.992Z"
+    },
+    {
+      "fromId": "char-zhu-siyao",
+      "toId": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
+      "type": "摯友",
+      "note": "",
+      "order": 1,
+      "id": "cb1d7f0c-ce74-484c-9c5b-6830346c0633",
+      "createdAt": "2026-10-28T12:26:57.528Z"
+    },
+    {
+      "fromId": "char-zhu-siyao",
+      "toId": "18585cc1-d3f9-4f1c-a76b-674c301f14dd",
+      "type": "摯友",
+      "note": "",
+      "order": 2,
+      "id": "e227d1e0-3c7a-4caa-9581-5e2c28037730",
+      "createdAt": "2026-10-28T12:27:08.306Z"
     }
   ],
   "stories": [],
   "places": [],
   "events": [
-    {
-      "id": "ev-rewind",
-      "title": "所有人同時握不住力量",
-      "date": "倒流的那一刻",
-      "body": "所有持有碎片的人在這一刻同時握不住力量。時間倒退，世界回到七年前。\n\n沒有人知道為什麼是這個年份。不是轉折點，不是宿命，不是誰的安排。",
-      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
-      "order": 4,
-      "createdAt": "2026-10-28T09:00:00.000Z"
-    },
     {
       "title": "七人戰死，力量散落人間",
       "date": "764 年前",
@@ -904,7 +1189,7 @@
       "title": "考完 DSE，過普通日子",
       "date": "2020 · DSE",
       "body": "她考上大學。成績剛好，不算好也不算差。",
-      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
+      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4,18585cc1-d3f9-4f1c-a76b-674c301f14dd,char-zhu-siyao",
       "order": 1,
       "id": "b1ba6c1b-6369-4e77-a81a-c31637674afd",
       "createdAt": "2026-10-28T09:35:03.613Z"
@@ -922,11 +1207,167 @@
       "title": "回到中四（現在）",
       "date": "2017 · 中四",
       "body": "時間回到 2017 年，中四那年。\n\n她們重新坐進課室，重新面對三年後的 DSE。\n\n身邊的人一個都不記得。記得的人，只記得一部分。",
-      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4,18585cc1-d3f9-4f1c-a76b-674c301f14dd",
-      "order": 3,
+      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4,18585cc1-d3f9-4f1c-a76b-674c301f14dd,char-zhu-siyao",
+      "order": 4,
       "id": "5e73cda2-5ff0-4de6-9125-b0edc3050383",
       "createdAt": "2026-10-28T09:35:08.825Z"
+    },
+    {
+      "id": "ev-rewind",
+      "title": "所有人同時握不住力量",
+      "date": "倒流的那一刻",
+      "body": "所有持有碎片的人在這一刻同時握不住力量。時間倒退，世界回到七年前。\n\n沒有人知道為什麼是這個年份。不是轉折點，不是宿命，不是誰的安排。",
+      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4,18585cc1-d3f9-4f1c-a76b-674c301f14dd,char-zhu-siyao",
+      "order": 3,
+      "createdAt": "2026-10-28T09:00:00.000Z"
     }
   ],
-  "gallery": []
+  "gallery": [
+    {
+      "eventId": "",
+      "title": "",
+      "image": "media/IMG_3190.jpeg",
+      "caption": "",
+      "characters": "6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
+      "order": 0,
+      "id": "932e0fed-4f2f-4f48-9bef-54ab2e4c388f",
+      "createdAt": "2026-10-28T10:51:53.890Z"
+    }
+  ],
+  "entries": [
+    {
+      "id": "en-hk",
+      "title": "香港",
+      "category": "地理",
+      "summary": "故事發生的地方。2017 年的中四，2020 年的 DSE。",
+      "body": "故事全部發生在[[香港]]。\n\n2017 年，她們是中四學生；2020 年，她們考 DSE。世界倒流之後，一切從 2017 重新開始。",
+      "related": "en-rewind,en-mg",
+      "order": 0,
+      "createdAt": "2026-10-28T11:00:00.000Z"
+    },
+    {
+      "id": "en-mg",
+      "title": "魔法少女",
+      "category": "組織",
+      "summary": "持有碎片、能變身戰鬥的人。代價是精力與壽命。",
+      "body": "被「命運選定」而得到碎片的人。\n\n目前已知四枚碎片有主人，其餘三枚不知所蹤。持有者能變身、能戰鬥，但代價會具體落在身上：有人嗜睡，有人失眠。\n\n敵人藏在[[老師]]這個身分裡，目標是殺掉魔法少女取回力量。",
+      "related": "en-rewind,en-teacher",
+      "order": 1,
+      "createdAt": "2026-10-28T11:00:01.000Z"
+    },
+    {
+      "id": "en-rewind",
+      "title": "時間倒流",
+      "category": "歷史事件",
+      "summary": "握不住力量時，世界退回 2017 年。",
+      "body": "持有碎片的人握不住那股力量的時候，時間會倒退。\n\n上一次發生時，世界整體退回 [[2017]]，也就是中四那年。記得的人不多，而且記得的不完整。\n\n沒有人知道為什麼停在這個年份。不是轉折點，不是宿命，就是巧合。",
+      "related": "en-mg,en-catalyst",
+      "order": 2,
+      "createdAt": "2026-10-28T11:00:02.000Z"
+    },
+    {
+      "id": "en-teacher",
+      "title": "老師",
+      "category": "組織",
+      "summary": "藏在「老師」這個身分裡的群體，替牠做事。",
+      "body": "牠的手下，穿著老師的衣服。\n\n他們做兩件事：殺掉[[魔法少女]]取回力量；以及用[[催化機器]]扭曲物件——到後來，連人也能催化。",
+      "related": "en-catalyst,en-mg",
+      "order": 3,
+      "createdAt": "2026-10-28T11:00:03.000Z"
+    },
+    {
+      "id": "en-catalyst",
+      "title": "催化機器",
+      "category": "概念",
+      "summary": "先扭曲物件，後期能催化人。",
+      "body": "由[[老師]]一方製造。\n\n初期只扭曲死物——扶手電梯、廣播、自動門。後期連人也能催化。",
+      "related": "en-teacher",
+      "order": 4,
+      "createdAt": "2026-10-28T11:00:04.000Z"
+    },
+    {
+      "id": "en-chung-yan",
+      "title": "天主教崇恩書院",
+      "category": "學校",
+      "summary": "中學。Chung Yan Catholic College。祝思姚就讀。",
+      "body": "**天主教崇恩書院**（Chung Yan Catholic College）\n\n中學。\n\n祝思姚就讀。",
+      "related": "",
+      "order": 5,
+      "createdAt": "2026-10-28T13:00:00.000Z"
+    },
+    {
+      "id": "en-ning-hok-gam",
+      "title": "寧學錦紀念中學",
+      "category": "學校",
+      "summary": "中學。Ning Hok Gam Memorial School。梁釔錂、凌栺林就讀。",
+      "body": "**寧學錦紀念中學**（Ning Hok Gam Memorial School）\n\n中學。\n\n梁釔錂、凌栺林就讀。",
+      "related": "",
+      "order": 6,
+      "createdAt": "2026-10-28T13:00:01.000Z"
+    },
+    {
+      "id": "en-heung-shing-univ",
+      "title": "香城大學",
+      "category": "學校",
+      "summary": "大學。University of Heung Shing。",
+      "body": "**香城大學**（University of Heung Shing）\n\n大學。\n\n凌栺林就讀新聞系，四年順利畢業。",
+      "related": "",
+      "order": 7,
+      "createdAt": "2026-10-28T13:00:02.000Z"
+    },
+    {
+      "id": "en-kowloon-univ",
+      "title": "九龍大學",
+      "category": "學校",
+      "summary": "大學。Kowloon University。",
+      "body": "**九龍大學**（Kowloon University）\n\n大學。",
+      "related": "",
+      "order": 8,
+      "createdAt": "2026-10-28T13:00:03.000Z"
+    },
+    {
+      "id": "en-hkumps",
+      "title": "香港醫學藥物科學大學",
+      "category": "學校",
+      "summary": "大學。Hong Kong University of Medical and Pharmaceutical Sciences。",
+      "body": "**香港醫學藥物科學大學**（Hong Kong University of Medical and Pharmaceutical Sciences）\n\n大學。\n\n凌栺林的哥哥曾就讀。",
+      "related": "",
+      "order": 9,
+      "createdAt": "2026-10-28T13:00:04.000Z"
+    }
+  ],
+  "music": [
+    {
+      "title": "地狱笑话",
+      "src": "media/[DLBunny.com][bilibili]“喜剧的内核 是悲剧”.mp3.mp4",
+      "page": "home",
+      "order": 0,
+      "id": "d28035bd-ce27-44e2-9b64-3a5fee71585d",
+      "createdAt": "2026-10-28T11:47:52.622Z"
+    },
+    {
+      "title": "恶果",
+      "src": "media/[DLBunny.com][bilibili]【恶果】.mp3.mp4",
+      "page": "home",
+      "order": 1,
+      "id": "1ced509e-af06-40f7-8b0b-7cf144f39c84",
+      "createdAt": "2026-10-28T11:59:37.988Z"
+    },
+    {
+      "title": "荒誕插曲",
+      "src": "media/[DLBunny.com][bilibili]“世界是荒诞的 我是活着的”.mp3.mp4",
+      "page": "char:6ec4965a-76e2-4a06-8543-dfcfb0ebf7e4",
+      "order": 2,
+      "id": "mig-liang-huangdan",
+      "createdAt": "2026-10-28T12:00:00.000Z"
+    },
+    {
+      "title": "妒恨TYPE BEAT",
+      "src": "media/[DLBunny.com][bilibili][电子]妒恨TYPE BEAT-音频可视化.mp3 (2).mp4",
+      "page": "char:18585cc1-d3f9-4f1c-a76b-674c301f14dd",
+      "order": 3,
+      "id": "mig-ling-duhen",
+      "createdAt": "2026-10-28T12:00:01.000Z"
+    }
+  ]
 }

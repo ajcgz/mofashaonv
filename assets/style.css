@@ -245,6 +245,7 @@ a.card:hover,.card.link:hover{
   pointer-events:none;
 }
 .graph-svg .node circle{stroke:#fff;stroke-width:2.5px;cursor:grab}
+.graph-svg .node image{pointer-events:none}
 .graph-svg .node .node-label{
   font-family:var(--sans);font-size:11.5px;font-weight:700;fill:var(--ink);
   paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round;
@@ -480,6 +481,427 @@ body.editing .map-wrap{cursor:crosshair}
 .graph-svg .node.picked circle{stroke:var(--warm);stroke-width:4px}
 .graph-svg .node.picked .node-label{fill:var(--warm)}
 
+/* ══════════════════════════════════════════════
+   角色卡牆 + 角色面板
+   ══════════════════════════════════════════════ */
+
+/* ── 篩選 chips ───────────────────────── */
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 18px}
+.filter-chip{
+  font:inherit;font-size:12px;font-weight:600;
+  padding:4px 12px;border-radius:999px;
+  border:1px solid var(--line);background:#fff;color:var(--ink-soft);
+  cursor:pointer;transition:.15s;
+}
+.filter-chip:hover{border-color:var(--accent);color:var(--accent)}
+.filter-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── 翻轉卡片 ─────────────────────────── */
+.char-wall{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.char-card{
+  padding:0;border:none;background:none;
+  perspective:900px;height:236px;
+  display:block;
+}
+.char-card::before{display:none}
+.char-card .flip-inner{
+  position:relative;width:100%;height:100%;
+  transform-style:preserve-3d;
+  transition:transform .55s cubic-bezier(.3,.8,.3,1);
+}
+.char-card:hover .flip-inner{transform:rotateY(180deg)}
+.char-card:focus-visible .flip-inner{transform:rotateY(180deg)}
+/* 編輯模式下不翻牌，方便點頭像換圖 */
+body.editing .char-card:hover .flip-inner{transform:none}
+@media (prefers-reduced-motion:reduce){
+  .char-card .flip-inner{transition:none}
+}
+.flip-face{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:16px;text-align:center;
+  border-radius:8px;background:var(--card);
+  border:1px solid color-mix(in srgb, var(--c, var(--accent)) 45%, var(--line));
+  box-shadow:0 1px 0 color-mix(in srgb, var(--c, var(--accent)) 22%, transparent);
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  overflow:hidden;
+}
+.flip-face.front .avatar{width:78px;height:78px;font-size:26px}
+.card-glow{
+  position:absolute;inset:-40% -20% auto -20%;height:120%;
+  background:radial-gradient(ellipse at 50% 0%, color-mix(in srgb,var(--c,var(--accent)) 26%, transparent), transparent 70%);
+  opacity:.5;pointer-events:none;
+}
+.flip-face .char-name{font-size:16px;margin-top:2px}
+.flip-face.back{
+  transform:rotateY(180deg);
+  align-items:flex-start;text-align:left;justify-content:flex-start;
+  gap:7px;overflow-y:auto;
+  border-color:color-mix(in srgb, var(--c, var(--accent)) 60%, var(--line));
+  background:
+    linear-gradient(180deg, color-mix(in srgb,var(--c,var(--accent)) 8%, #fff), #fff 42%);
+}
+.flip-face.back .chips{margin-top:0}
+.flip-face.back .summary{
+  font-size:12.5px;line-height:1.65;color:var(--ink-soft);
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+}
+.flip-hint{
+  margin-top:auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+  color:var(--c, var(--accent));font-weight:700;
+}
+.chip.status{background:color-mix(in srgb,var(--warm) 14%,#fff);color:var(--warm);font-weight:700}
+
+/* ── 角色面板 ─────────────────────────── */
+.char-page{--c:var(--char-color, var(--accent))}
+.char-hero-2{
+  display:grid;grid-template-columns:minmax(0,340px) 1fr;gap:24px;
+  align-items:start;margin-bottom:24px;
+}
+@media (max-width:760px){.char-hero-2{grid-template-columns:1fr}}
+
+.viewer-stage{
+  position:relative;width:100%;aspect-ratio:3/4;
+  border-radius:8px;overflow:hidden;
+  background:
+    linear-gradient(180deg, color-mix(in srgb,var(--c) 10%, #fff), #fff);
+  border:1px solid color-mix(in srgb,var(--c) 40%, var(--line));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 12px 30px -24px color-mix(in srgb,var(--c) 80%, transparent);
+}
+.viewer-stage img{width:100%;height:100%;object-fit:cover;display:block}
+.viewer-stage.clickable{cursor:zoom-in}
+.viewer-empty{padding:20px}
+.viewer-thumbs{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.viewer-thumb{
+  width:52px;height:52px;padding:0;border-radius:5px;overflow:hidden;
+  border:1px solid var(--line);background:#fff;cursor:pointer;transition:.15s;
+}
+.viewer-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.viewer-thumb.on{border-color:var(--c);box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 24%, transparent)}
+
+.char-info h1{
+  font-size:clamp(24px,3.4vw,34px);
+  color:color-mix(in srgb, var(--c) 72%, var(--ink));
+  margin-bottom:5px;
+}
+.char-info .alias{color:var(--muted);font-family:var(--mono);font-size:12.5px;margin-bottom:10px}
+.char-info .summary{color:var(--ink-soft);margin-bottom:12px;max-width:38em}
+.char-info .chips{margin-bottom:14px}
+.char-info .hero-actions{margin-top:2px}
+
+/* 檔案面板 */
+.stat-panel{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:1px;background:color-mix(in srgb,var(--c) 18%, var(--line));
+  border:1px solid color-mix(in srgb,var(--c) 26%, var(--line));
+  border-radius:6px;overflow:hidden;margin-top:6px;
+}
+.stat-cell{
+  background:#fff;padding:9px 12px;
+  display:grid;grid-template-columns:auto 1fr;grid-template-areas:"ico label" "ico value";
+  column-gap:9px;align-items:center;
+}
+.stat-ico{grid-area:ico;font-size:16px;line-height:1;filter:grayscale(.2)}
+.stat-label{grid-area:label;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--muted)}
+.stat-value{grid-area:value;font-size:13.5px;font-weight:700;line-height:1.4}
+
+/* 分頁 */
+.tabs{
+  display:flex;gap:2px;border-bottom:1px solid color-mix(in srgb,var(--c) 26%, var(--line));
+  margin:8px 0 18px;overflow-x:auto;
+}
+.tab{
+  font:inherit;font-size:13px;font-weight:700;
+  padding:8px 18px;border:none;background:none;cursor:pointer;
+  color:var(--muted);border-bottom:2px solid transparent;
+  white-space:nowrap;transition:.15s;
+}
+.tab:hover{color:var(--ink)}
+.tab.on{
+  color:color-mix(in srgb,var(--c) 78%, var(--ink));
+  border-bottom-color:var(--c);
+}
+.tab-body{min-height:120px}
+.tab-sub{
+  font-size:13px;letter-spacing:.08em;color:var(--muted);
+  margin:20px 0 8px;font-weight:700;
+}
+.tab-body .chips{margin-top:10px}
+
+/* 台詞氣泡 */
+.quote-list{display:flex;flex-direction:column;gap:14px;margin-top:4px}
+.quote-bubble{display:flex;gap:11px;align-items:flex-start}
+.quote-avatar{width:42px;height:42px;font-size:16px;border-radius:50%;flex:0 0 auto}
+.quote-body{
+  position:relative;flex:1 1 auto;
+  background:color-mix(in srgb,var(--c) 7%, #fff);
+  border:1px solid color-mix(in srgb,var(--c) 26%, var(--line));
+  border-radius:2px 12px 12px 12px;
+  padding:10px 14px;
+}
+.quote-body::before{
+  content:"";position:absolute;left:-7px;top:12px;
+  width:12px;height:12px;transform:rotate(45deg);
+  background:color-mix(in srgb,var(--c) 7%, #fff);
+  border-left:1px solid color-mix(in srgb,var(--c) 26%, var(--line));
+  border-bottom:1px solid color-mix(in srgb,var(--c) 26%, var(--line));
+}
+.quote-text{font-size:14.5px;line-height:1.75;color:var(--ink)}
+.quote-play{
+  margin-top:8px;font:inherit;font-size:11.5px;font-weight:700;
+  padding:3px 11px;border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--c) 40%, var(--line));
+  background:#fff;color:color-mix(in srgb,var(--c) 80%, var(--ink));cursor:pointer;
+}
+.quote-play:hover{background:color-mix(in srgb,var(--c) 10%, #fff)}
+
+/* 小型關係圖 */
+.mini-graph-wrap{
+  background:#fff;border:1px solid color-mix(in srgb,var(--c) 26%, var(--line));
+  border-radius:6px;padding:6px;
+}
+.mini-graph{width:100%;height:auto;display:block}
+.mini-graph .mini-edge-label{
+  font-family:var(--mono);font-size:9.5px;fill:var(--ink-soft);
+  paint-order:stroke;stroke:#fff;stroke-width:3.5px;text-anchor:middle;
+}
+.mini-graph .mini-node circle{stroke:#fff;stroke-width:2.5px;transition:.15s}
+.mini-graph .mini-node:hover circle{stroke:var(--c);stroke-width:3.5px}
+.mini-graph .mini-node.center circle{stroke-width:3px;stroke:color-mix(in srgb,var(--c) 55%, #fff)}
+.mini-graph .mini-node-label{
+  font-family:var(--sans);font-size:11.5px;font-weight:700;fill:var(--ink);
+  paint-order:stroke;stroke:#fff;stroke-width:4px;text-anchor:middle;
+}
+
+/* BGM */
+.bgm-dock{position:fixed;right:18px;bottom:18px;z-index:50}
+.bgm-btn{
+  display:flex;align-items:center;gap:7px;
+  font:inherit;font-size:11.5px;font-weight:700;
+  padding:8px 14px;border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--c) 45%, var(--line));
+  background:#fff;color:color-mix(in srgb,var(--c) 80%, var(--ink));
+  cursor:pointer;box-shadow:0 8px 24px -14px rgba(10,20,28,.5);
+  transition:.15s;
+}
+.bgm-btn:hover{background:color-mix(in srgb,var(--c) 8%, #fff)}
+.bgm-ico{font-size:14px;line-height:1}
+.bgm-btn.playing{background:color-mix(in srgb,var(--c) 88%, #000);color:#fff;border-color:transparent}
+.bgm-btn.playing .bgm-ico{animation:bgmPulse 1.6s ease-in-out infinite}
+@keyframes bgmPulse{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.18);opacity:1}}
+.bgm-dock audio{display:none}
+
+@media (max-width:620px){
+  .char-wall{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .char-card{height:210px}
+}
+
+/* ── 百科 ─────────────────────────────── */
+.wiki-grid{
+  display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+}
+.wiki-card{
+  padding:16px;gap:8px;border-radius:4px;
+  border-left:3px solid var(--accent);
+}
+.wiki-card h3{font-size:16.5px;margin:0}
+.wiki-card .summary{font-size:13px;color:var(--ink-soft);line-height:1.7}
+.wiki-cat{
+  display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;
+  color:var(--warm);border:1px solid color-mix(in srgb,var(--warm) 38%, #fff);
+  background:color-mix(in srgb,var(--warm) 6%, #fff);
+  border-radius:3px;padding:1px 7px;align-self:flex-start;
+}
+.wiki-cat.big{font-size:11px;padding:2px 10px;margin-bottom:10px}
+.wiki-links-count{
+  margin-top:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted);
+}
+.entry-head{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.entry-head h1{font-size:clamp(24px,3.4vw,34px);margin-bottom:8px}
+.entry-summary{color:var(--ink-soft);max-width:42em;margin-bottom:10px}
+.entry-prose{font-size:15.5px;line-height:1.95}
+.wikilink{
+  color:var(--accent);font-weight:600;
+  border-bottom:1px dashed color-mix(in srgb,var(--accent) 55%, transparent);
+  padding-bottom:1px;transition:.15s;
+}
+.wikilink:hover{background:color-mix(in srgb,var(--accent) 10%, transparent);border-bottom-style:solid}
+.wikilink.missing{
+  color:var(--muted);border-bottom:1px dotted var(--line);cursor:help;
+}
+.wiki-related{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.related-card{
+  display:flex;flex-direction:column;gap:5px;
+  background:#fff;border:1px solid var(--line);border-radius:4px;
+  padding:12px 14px;transition:.16s;
+}
+.related-card:hover{border-color:var(--accent);box-shadow:0 8px 20px -18px rgba(20,32,42,.5)}
+.related-card b{font-size:14.5px}
+.related-sum{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* ── 音樂 dock ────────────────────────── */
+.music-dock{
+  position:fixed;right:18px;bottom:18px;z-index:52;
+  display:flex;align-items:center;gap:6px;
+}
+.music-dock.hidden{display:none}
+.music-dock.empty .bgm-btn{
+  border-style:dashed;color:var(--muted);
+  background:rgba(255,255,255,.86);
+}
+.music-dock.empty .bgm-btn .bgm-ico{opacity:.55}
+.music-dock audio{display:none}
+.music-add{
+  width:26px;height:26px;border-radius:50%;padding:0;
+  border:1px dashed var(--line);background:#fff;color:var(--muted);
+  font-size:13px;line-height:1;cursor:pointer;display:none;
+  align-items:center;justify-content:center;
+}
+.music-add:hover{color:var(--accent);border-color:var(--accent)}
+.music-shuffle{
+  width:26px;height:26px;border-radius:50%;padding:0;
+  border:1px solid var(--line);background:#fff;color:var(--muted);
+  font-size:13px;line-height:1;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:.15s;
+}
+.music-shuffle:hover{color:var(--accent);border-color:var(--accent)}
+.music-shuffle.on{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+}
+
+/* ── 首屏背景圖（融入紙面） ─────────────── */
+.hero-bg{
+  position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+}
+.hero-bg img{
+  width:100%;height:100%;object-fit:cover;object-position:72% center;
+  opacity:.34;
+  filter:saturate(.72) contrast(.96);
+  transition:opacity .9s ease;
+  -webkit-mask-image:radial-gradient(120% 110% at 80% 42%, rgba(0,0,0,.95) 0%, rgba(0,0,0,.5) 52%, transparent 80%);
+  mask-image:radial-gradient(120% 110% at 80% 42%, rgba(0,0,0,.95) 0%, rgba(0,0,0,.5) 52%, transparent 80%);
+}
+.hero-bg-scrim{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(to right,
+      var(--paper) 0%,
+      color-mix(in srgb, var(--paper) 82%, transparent) 34%,
+      color-mix(in srgb, var(--paper) 30%, transparent) 62%,
+      transparent 86%),
+    linear-gradient(to top,
+      var(--paper) 0%,
+      color-mix(in srgb, var(--paper) 55%, transparent) 22%,
+      transparent 52%);
+}
+.hero > *:not(.hero-bg){position:relative;z-index:1}
+@media (max-width:700px){
+  .hero-bg img{object-position:65% center;opacity:.28}
+  .hero-bg-scrim{
+    background:
+      linear-gradient(to right,
+        var(--paper) 0%,
+        color-mix(in srgb, var(--paper) 86%, transparent) 46%,
+        color-mix(in srgb, var(--paper) 40%, transparent) 78%,
+        transparent 96%),
+      linear-gradient(to top, var(--paper) 0%, transparent 60%);
+  }
+}
+
+/* ── 各人物專屬歌曲卡 ─────────────────── */
+.char-music-grid{
+  display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+}
+.char-music-card{
+  background:#fff;border:1px solid var(--line);border-radius:4px;
+  padding:12px;display:flex;flex-direction:column;gap:10px;
+}
+.char-music-head{display:flex;gap:10px;align-items:center;min-width:0}
+.char-music-head .avatar{width:38px;height:38px;font-size:14px;border-radius:6px}
+.char-music-meta{display:flex;flex-direction:column;gap:1px;min-width:0}
+.char-music-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* 角色頁的專屬歌曲列 */
+.char-music{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:12px;padding:8px 12px;border-radius:4px;
+  background:color-mix(in srgb, var(--c, var(--accent)) 7%, #fff);
+  border:1px solid color-mix(in srgb, var(--c, var(--accent)) 26%, var(--line));
+}
+.char-music-label{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  color:color-mix(in srgb, var(--c, var(--accent)) 80%, var(--ink));font-weight:700;
+}
+.char-music-src{
+  font-family:var(--mono);font-size:11px;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:16em;
+}
+.char-music-scope{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;
+  color:var(--muted);opacity:.85;
+  border:1px dashed var(--line);border-radius:3px;padding:0 6px;
+}
+.char-music .btn{margin-left:0}
+
+/* 角色頁的歌曲清單 */
+.char-music{flex-direction:column;align-items:stretch;gap:8px}
+.char-music-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.char-music-count{
+  font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-left:auto;
+}
+.char-song-list{display:flex;flex-direction:column;gap:1px;background:var(--line);border-radius:3px;overflow:hidden}
+.char-song{
+  display:flex;align-items:center;gap:8px;background:#fff;padding:5px 10px;font-size:12.5px;
+}
+.char-song-idx{
+  font-family:var(--mono);font-size:9.5px;color:var(--muted);
+  width:14px;flex:0 0 auto;text-align:center;
+}
+.char-song-name{
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;
+}
+.char-song .btn{flex:0 0 auto}
+.char-music-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* 多首歌的輸入框 */
+.songs-field{display:flex;flex-direction:column;gap:6px}
+.songs-field textarea{
+  font:inherit;font-size:13px;padding:8px 10px;border-radius:6px;
+  border:1px solid var(--line);background:#fff;color:var(--ink);
+  resize:vertical;line-height:1.6;font-family:var(--mono);
+}
+.songs-btns{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ── 音樂清單（歌曲編輯介面） ─────────── */
+.song-list{display:flex;flex-direction:column;gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:4px;overflow:hidden}
+.song-row{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:#fff;padding:10px 14px;font-size:13.5px;
+}
+.song-row:hover{background:color-mix(in srgb,var(--accent) 4%,#fff)}
+.song-avatar{width:36px;height:36px;font-size:14px;border-radius:6px;flex:0 0 auto}
+.song-main{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 180px}
+.song-name{font-weight:700;font-size:14px;line-height:1.4}
+.song-name:hover{color:var(--accent)}
+.song-src{
+  font-family:var(--mono);font-size:10.5px;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.song-badge{
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  color:var(--warm);border:1px solid color-mix(in srgb,var(--warm) 38%, #fff);
+  background:color-mix(in srgb,var(--warm) 6%, #fff);
+  border-radius:3px;padding:2px 8px;flex:0 0 auto;
+}
+.song-row .btn{margin-left:0}
+@media (max-width:620px){
+  .song-row{gap:7px;padding:9px 11px}
+  .song-row .btn{font-size:11px;padding:2px 8px}
+}
+
 /* ── toast ────────────────────────────── */
 .toast{
   position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);
@@ -561,21 +983,6 @@ body.editing .map-wrap{cursor:crosshair}
 }
 .curtain.gone{opacity:0;visibility:hidden}
 @keyframes pulseFade{0%,100%{opacity:.35}50%{opacity:.85}}
-
-/* 首屏玉印章 */
-.hero-seal{
-  position:absolute;right:8px;bottom:16px;
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  padding:8px 10px;border:2px solid var(--stamp);border-radius:3px;
-  color:var(--stamp);opacity:.5;transform:rotate(-4deg);
-  font-family:var(--serif);font-size:13px;font-weight:700;
-  letter-spacing:.3em;line-height:1.15;text-align:center;
-  pointer-events:none;
-}
-.hero-seal small{
-  font-family:var(--mono);font-size:8px;letter-spacing:.16em;font-weight:400;
-}
-@media (max-width:700px){.hero-seal{display:none}}
 
 /* ── 頂欄 HUD ─────────────────────────── */
 .hud{
@@ -722,6 +1129,23 @@ a.card:hover .char-name::after,
              inset 0 -10px 14px -10px rgba(20,32,42,.28);
   pointer-events:none;
 }
+.avatar.editable{cursor:pointer;transition:.18s}
+.avatar.editable:hover{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%, transparent);
+}
+.avatar .avatar-edit{
+  position:absolute;inset:auto 0 0 0;
+  display:flex;align-items:center;justify-content:center;
+  height:0;overflow:hidden;
+  background:rgba(20,32,42,.62);color:#fff;
+  font-size:12px;line-height:1;
+  border-radius:0 0 inherit inherit;
+  transition:height .18s;
+  pointer-events:none;
+}
+.avatar.editable:hover .avatar-edit{height:40%}
+.avatar.big .avatar-edit{font-size:15px}
 
 /* ── 資訊欄：考試卷表格 ───────────────── */
 .facts{border-radius:0;background:var(--hair);border-color:var(--hair)}

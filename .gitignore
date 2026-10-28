@@ -1,0 +1,16 @@
+# 系統檔
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 編輯器
+.vscode/
+.idea/
+*.swp
+
+# 備份與草稿（不公開）
+archive/
+
+# 日誌
+*.log
+npm-debug.log*
