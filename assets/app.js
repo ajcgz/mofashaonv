@@ -117,8 +117,8 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 /* ── 角色配色 ─────────────────────────────── */
 var COLOR_MAP = {
   "水藍": "#3f8fbf", "藍綠色": "#2f8f8f", "藍綠": "#2f8f8f", "藍": "#2f6f9e", "青": "#2f8f8f", "綠": "#3f8f5f", "紫": "#7a4fa3",
-  "紅": "#b4443a", "粉": "#c2506f", "橙": "#d9762f", "黃": "#c9a227", "金": "#b8912f",
-  "白": "#8f9aa1", "黑": "#3a3f44", "灰": "#7b8b96", "棕": "#8d5a3a", "銀": "#8fa0aa"
+  "桃紅": "#d76b8c", "桃": "#d76b8c", "紅": "#b4443a", "粉": "#c2506f", "橙": "#d9762f", "黃": "#c9a227", "金": "#b8912f",
+  "白": "#8f9aa1", "黑": "#3a3f44", "灰": "#7b8b96", "棕": "#8d5a3a", "茶": "#a0703f", "銀": "#8fa0aa"
 };
 
 function resolveCharColor(c) {
@@ -323,7 +323,7 @@ var CHAR_FIELDS = ["name", "alias", "role", "faction", "age", "birthday", "heigh
   "catchphrase", "want", "loseFear", "secret", "status", "trivia", "quotes", "bgm",
   "voiceActor", "imprintSong", "stats", "outfits", "forms", "order"];
 
-var STORY_FIELDS = ["eventId", "title", "body", "characters", "tags", "pov", "form", "order"];
+var STORY_FIELDS = ["eventId", "title", "body", "characters", "tags", "pov", "form", "scope", "order"];
 
 var OPS = {
   updateWorld: { op: "set", path: "world", fields: ["name", "tagline", "intro", "era", "accent", "footer"] },
@@ -340,11 +340,11 @@ var OPS = {
   addPlace: { op: "append", path: "places", fields: ["name", "category", "note", "characters", "x", "y", "order"], auto: true },
   updatePlace: { op: "update", path: "places", fields: ["name", "category", "note", "characters", "x", "y", "order"] },
   removePlace: { op: "remove", path: "places" },
-  addEvent: { op: "append", path: "events", fields: ["title", "date", "body", "characters", "order"], auto: true },
-  updateEvent: { op: "update", path: "events", fields: ["title", "date", "body", "characters", "order"] },
+  addEvent: { op: "append", path: "events", fields: ["title", "date", "body", "characters", "scope", "order"], auto: true },
+  updateEvent: { op: "update", path: "events", fields: ["title", "date", "body", "characters", "scope", "order"] },
   removeEvent: { op: "remove", path: "events" },
-  addGallery: { op: "append", path: "gallery", fields: ["eventId", "title", "image", "caption", "characters", "order"], auto: true },
-  updateGallery: { op: "update", path: "gallery", fields: ["eventId", "title", "image", "caption", "characters", "order"] },
+  addGallery: { op: "append", path: "gallery", fields: ["eventId", "title", "image", "caption", "characters", "group", "hidden", "scope", "order"], auto: true },
+  updateGallery: { op: "update", path: "gallery", fields: ["eventId", "title", "image", "caption", "characters", "group", "hidden", "scope", "order"] },
   removeGallery: { op: "remove", path: "gallery" },
   addEntry: { op: "append", path: "entries", fields: ["title", "category", "summary", "body", "related", "order"], auto: true },
   updateEntry: { op: "update", path: "entries", fields: ["title", "category", "summary", "body", "related", "order"] },
@@ -606,6 +606,8 @@ function render() {
   else if (route.view === "wiki") page = route.id ? entryPage(route.id) : wikiPage();
   else if (route.view === "music") page = musicPage();
   else if (route.view === "stories") page = route.id ? storyPage(route.id, route.sub) : storiesPage();
+  else if (route.view === "game") page = gamePage();
+  else if (route.view === "search") page = searchPage(route.id);
   else page = homePage();
   host.appendChild(page);
   decoratePage(page);
@@ -889,7 +891,7 @@ function homePage() {
     ["人物", S.characters.length],
     ["時間綫", S.events.length],
     ["百科", S.entries.length],
-    ["畫廊", S.gallery.length]
+    ["畫廊", visibleGallery().length]
   ].forEach(function (pair) {
     oStats.appendChild(h("span", null, h("b", { text: String(pair[1]) }), document.createTextNode(pair[0])));
   });
@@ -930,7 +932,7 @@ function homePage() {
     h("div", { class: "stat" }, h("b", { text: String(S.relations.length) }), h("span", { text: "人物關係" })),
     h("div", { class: "stat" }, h("b", { text: String(S.events.length) }), h("span", { text: "時間綫節點" })),
     h("div", { class: "stat" }, h("b", { text: String(S.places.length) }), h("span", { text: "地圖地點" })),
-    h("div", { class: "stat" }, h("b", { text: String(S.gallery.length) }), h("span", { text: "畫廊圖片" })),
+    h("div", { class: "stat" }, h("b", { text: String(visibleGallery().length) }), h("span", { text: "畫廊圖片" })),
     h("div", { class: "stat" }, h("b", { text: String(S.stories.length) }), h("span", { text: "背景故事" }))
   );
   page.appendChild(stats);
@@ -958,16 +960,17 @@ function homePage() {
     [h("a", { class: "btn small", href: "#/characters", text: "全部 →" })]));
 
   /* 時間綫速覽 */
-  if (S.events.length) {
+  var worldEvents = S.events.filter(function (e) { return String(e.scope || "") !== "personal"; });
+  if (worldEvents.length) {
     var tlRows = h("div", { class: "home-tl" });
-    S.events.slice(-3).reverse().forEach(function (ev) {
+    worldEvents.slice(-3).reverse().forEach(function (ev) {
       var row = h("a", { class: "home-tl-row", href: "#/timeline" });
       row.appendChild(h("span", { class: "home-tl-date", text: ev.date || "—" }));
       row.appendChild(h("span", { class: "home-tl-title", text: ev.title || "未命名節點" }));
       row.appendChild(h("span", { class: "home-tl-teaser", text: teaserText(ev.body) }));
       tlRows.appendChild(row);
     });
-    page.appendChild(sectionBlock("時間綫速覽", S.events.length + " 個節點", tlRows,
+    page.appendChild(sectionBlock("時間綫速覽", worldEvents.length + " 個節點", tlRows,
       [h("a", { class: "btn small", href: "#/timeline", text: "完整時間綫 →" })]));
   }
 
@@ -996,9 +999,10 @@ function homePage() {
   }
 
   /* 畫廊速覽 */
-  if (S.gallery.length) {
+  var visGallery = visibleGallery();
+  if (visGallery.length) {
     var gGrid = h("div", { class: "gallery-grid small" });
-    S.gallery.slice(-4).reverse().forEach(function (g) {
+    visGallery.slice(-4).reverse().forEach(function (g) {
       var cell = h("figure", { class: "gallery-cell" });
       var frame = h("div", { class: "gallery-frame" });
       frame.appendChild(h("img", { src: g.image, alt: g.title || "", loading: "lazy" }));
@@ -1006,7 +1010,7 @@ function homePage() {
       cell.appendChild(frame);
       gGrid.appendChild(cell);
     });
-    page.appendChild(sectionBlock("畫廊", S.gallery.length + " 張", gGrid,
+    page.appendChild(sectionBlock("畫廊", visGallery.length + " 張", gGrid,
       [h("a", { class: "btn small", href: "#/gallery", text: "全部圖片 →" })]));
   }
 
@@ -1150,78 +1154,35 @@ function characterPage(id) {
   var col = resolveCharColor(c);
   page.style.setProperty("--char-color", col);
 
-  /* ── 立繪 + 多圖切換（只取畫廊圖，頭像不重複出現）── */
-  var shots = [];
-  S.gallery.filter(function (g) {
-    return csv(g.characters).indexOf(id) >= 0 && String(g.image || "").trim() && g.image !== c.image;
-  }).forEach(function (g) {
-    shots.push({ src: g.image, title: g.title || "" });
-  });
-  var seenPic = {};
-  shots = shots.filter(function (s) {
-    if (!s.src || seenPic[s.src]) return false;
-    seenPic[s.src] = 1;
-    return true;
-  });
-  if (charImgIndex >= shots.length) charImgIndex = 0;
-
-  var hero = h("div", { class: "char-hero-2" });
-
-  var stage = h("div", { class: "viewer-stage" });
-  var bigImg = h("img", { alt: c.name || "" });
-  var emptyStage = h("div", { class: "viewer-empty" }, avatar(c, "big"));
-  function paintStage() {
-    stage.innerHTML = "";
-    if (shots.length) {
-      bigImg.src = shots[charImgIndex].src;
-      stage.appendChild(bigImg);
-      stage.classList.add("clickable");
-    } else {
-      stage.appendChild(emptyStage);
-      stage.classList.remove("clickable");
-    }
-  }
-  stage.addEventListener("click", function () {
-    if (!shots.length) return;
-    openLightbox({ image: shots[charImgIndex].src, title: shots[charImgIndex].title || c.name });
-  });
-  paintStage();
-  hero.appendChild(stage);
-
-  if (shots.length > 1) {
-    var thumbs = h("div", { class: "viewer-thumbs" });
-    shots.forEach(function (s, i) {
-      var t = h("button", { class: "viewer-thumb" + (i === charImgIndex ? " on" : "") });
-      t.appendChild(h("img", { src: s.src, alt: s.title || "", loading: "lazy" }));
-      t.addEventListener("click", function (e) {
-        e.stopPropagation();
-        charImgIndex = i;
-        render();
-      });
-      thumbs.appendChild(t);
-    });
-    hero.appendChild(thumbs);
-  }
+  /* 角色頁不顯示圖片區塊：立繪與縮圖選擇已移除 */
 
   /* ── 標題與基本資訊 ── */
   var info = h("div", { class: "char-info" });
-  info.appendChild(h("h1", { text: c.name || "未命名" }));
+
+  /* 頭像 + 名字區 */
+  var idRow = h("div", { class: "char-id-row" });
+  idRow.appendChild(avatar(c, "big"));
+  var idText = h("div", { class: "char-id-text" });
+  idRow.appendChild(idText);
+  info.appendChild(idRow);
+
+  idText.appendChild(h("h1", { text: c.name || "未命名" }));
   var sub = [];
   if (c.alias) sub.push("「" + c.alias + "」");
   if (c.role) sub.push(c.role);
   if (c.status) sub.push(c.status);
-  if (sub.length) info.appendChild(h("div", { class: "alias", text: sub.join(" · ") }));
-  if (c.summary) info.appendChild(h("p", { class: "summary", text: c.summary }));
+  if (sub.length) idText.appendChild(h("div", { class: "alias", text: sub.join(" · ") }));
+  if (c.summary) idText.appendChild(h("p", { class: "summary", text: c.summary }));
 
   var badges = h("div", { class: "chips" });
   if (c.faction) badges.appendChild(h("span", { class: "chip faction", text: c.faction }));
   csv(c.tags).forEach(function (t) { badges.appendChild(h("span", { class: "chip", text: t })); });
-  info.appendChild(badges);
+  idText.appendChild(badges);
 
   /* 一句台詞（取第一句） */
   var firstQuote = String(c.quotes || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean)[0];
   if (firstQuote) {
-    info.appendChild(h("blockquote", {
+    idText.appendChild(h("blockquote", {
       class: "char-line",
       text: "「" + firstQuote.split("|")[0].trim() + "」"
     }));
@@ -1252,8 +1213,7 @@ function characterPage(id) {
     info.appendChild(panel);
   }
 
-  hero.appendChild(info);
-  page.appendChild(hero);
+  page.appendChild(info);
 
   /* ── 能力面板（雷達）＋ 印象資訊 ── */
   var stats = parseStats(c.stats);
@@ -1315,7 +1275,9 @@ function characterPage(id) {
       listBox.appendChild(h("div", { class: "empty", text: "還沒有印象色、印象曲、腦內聲優等資料。" }));
     }
     row.appendChild(listBox);
-    page.appendChild(sectionBlock("角色面板", "", row));
+    page.appendChild(sectionBlock("角色面板", "", row, [
+      editButton("編輯角色面板", function () { editCharPanel(id); })
+    ]));
   }
 
   /* ── 分頁 ── */
@@ -1325,8 +1287,9 @@ function characterPage(id) {
     { k: "outfits", label: "圖鑑" },
     { k: "trivia", label: "軼事" },
     { k: "quotes", label: "台詞" },
-    { k: "gallery", label: "畫廊" }
+    { k: "line", label: "時間綫" }
   ];
+  if (!tabs.some(function (t) { return t.k === charTab; })) charTab = "intro";
   var tabBar = h("div", { class: "tabs" });
   var tabBody = h("div", { class: "tab-body" });
 
@@ -1410,7 +1373,11 @@ function characterPage(id) {
           var strip = h("div", { class: "form-strip" });
           forms.forEach(function (f2, i) {
             var chip2 = h("button", { class: "form-chip" + (i === formPickB ? " on" : ""), type: "button" });
-            if (f2.image) chip2.appendChild(h("img", { src: f2.image, alt: f2.name || "", loading: "lazy" }));
+            if (f2.image) {
+              var chipImg = h("img", { src: f2.image, alt: f2.name || "", loading: "lazy" });
+              applyFrame(chipImg, f2);
+              chip2.appendChild(chipImg);
+            }
             chip2.appendChild(h("span", { text: f2.name || ("形態 " + (i + 1)) }));
             chip2.addEventListener("click", function () { formPickB = i; paintTab(); });
             strip.appendChild(chip2);
@@ -1449,7 +1416,103 @@ function characterPage(id) {
 
     if ((charTab === "forms" || charTab === "outfits") && canEdit()) {
       tabBody.appendChild(h("div", { class: "field-btns" },
-        editButton("編輯" + (charTab === "forms" ? "形態資料" : "服裝圖鑑"), function () { editCharacter(id); })
+        charTab === "forms"
+          ? (function () {
+            var b = h("button", { class: "btn small only-edit", text: "調整圖片畫面" });
+            b.addEventListener("click", function () { openFormFrameEditor(id); });
+            return b;
+          })()
+          : null,
+        editButton(charTab === "forms" ? "編輯形態資料" : "編輯服裝圖鑑", function () { editCharPanel(id); })
+      ));
+    }
+
+    if (charTab === "line") {
+      var myEvents = S.events.filter(function (ev) {
+        return csv(ev.characters).indexOf(id) >= 0;
+      });
+
+      if (!myEvents.length) {
+        tabBody.appendChild(h("div", {
+          class: "empty",
+          text: editMode
+            ? "時間綫上還沒有標記到這位角色。到「時間綫」編輯節點，在「涉及人物」勾選她；個別經歷可設為「個人事件」。"
+            : "時間綫上還沒有標記到這位角色。"
+        }));
+      } else {
+        var myLine = h("div", { class: "timeline" });
+        myEvents.forEach(function (ev) {
+          var isPersonal = String(ev.scope || "") === "personal";
+          var item = h("div", { class: "tl-item" });
+          var marker = h("div", { class: "tl-marker" });
+          marker.appendChild(h("span", { class: "tl-dot" }));
+          item.appendChild(marker);
+
+          var body = h("div", { class: "tl-body" });
+          var top = h("div", { class: "tl-top" });
+          if (ev.date) top.appendChild(h("span", { class: "tl-date", text: ev.date }));
+          top.appendChild(h("h3", { class: "tl-title", text: ev.title || "未命名節點" }));
+          if (isPersonal) top.appendChild(h("span", { class: "badge", text: "個人事件" }));
+          body.appendChild(top);
+          if (ev.body) body.appendChild(richText(ev.body, "tl-text"));
+
+          if (canEdit()) {
+            var rowActs = h("div", { class: "field-btns only-edit" });
+            var addStoryBtn = h("button", { class: "btn small", text: "＋ 新故事" });
+            addStoryBtn.addEventListener("click", function () { editStory(null, ev.id, id); });
+            rowActs.appendChild(addStoryBtn);
+
+            var addPicBtn = h("button", { class: "btn small", text: "＋ 新圖片" });
+            addPicBtn.addEventListener("click", function () { editGallery(null, id, ev.id); });
+            rowActs.appendChild(addPicBtn);
+
+            var pickStoryBtn = h("button", { class: "btn small", text: "選已有故事" });
+            pickStoryBtn.addEventListener("click", function () { pickExistingForEvent("story", ev.id, id); });
+            rowActs.appendChild(pickStoryBtn);
+
+            var pickPicBtn = h("button", { class: "btn small", text: "選已有圖片" });
+            pickPicBtn.addEventListener("click", function () { pickExistingForEvent("gallery", ev.id, id); });
+            rowActs.appendChild(pickPicBtn);
+
+            var editEvBtn = h("button", { class: "btn small", text: "編輯節點" });
+            editEvBtn.addEventListener("click", function () { editEvent(ev.id); });
+            rowActs.appendChild(editEvBtn);
+
+            body.appendChild(rowActs);
+          }
+
+          var bound = S.stories.filter(function (st) { return st.eventId === ev.id; });
+          if (bound.length) {
+            var links = h("div", { class: "tl-links" });
+            bound.forEach(function (st) {
+              links.appendChild(h("a", {
+                class: "tl-link", href: "#/stories/" + st.id + "/0",
+                text: "▤ " + (st.title || "未命名故事")
+              }));
+            });
+            body.appendChild(links);
+          }
+
+          var boundPics = visibleGallery().filter(function (g) { return g.eventId === ev.id; });
+          if (boundPics.length) {
+            var gwrap = h("div", { class: "tl-links" });
+            boundPics.forEach(function (g) {
+              var thumb = h("a", { class: "tl-thumb", href: "javascript:void(0)", title: g.title || g.caption || "" });
+              thumb.appendChild(h("img", { src: g.image, alt: g.title || "", loading: "lazy" }));
+              thumb.addEventListener("click", function (e2) { e2.preventDefault(); openLightbox(g); });
+              gwrap.appendChild(thumb);
+            });
+            body.appendChild(gwrap);
+          }
+
+          item.appendChild(body);
+          myLine.appendChild(item);
+        });
+        tabBody.appendChild(myLine);
+      }
+
+      tabBody.appendChild(h("div", { class: "field-btns" },
+        h("a", { class: "btn small", href: "#/timeline", text: "看全部人的時間綫 →" })
       ));
     }
 
@@ -1587,27 +1650,7 @@ function characterPage(id) {
       }
     }
 
-    if (charTab === "gallery") {
-      var mine = S.gallery.filter(function (g) {
-        return csv(g.characters).indexOf(id) >= 0 && g.image !== c.image;
-      });
-      if (!mine.length) {
-        tabBody.appendChild(h("div", { class: "empty", text: editMode ? "還沒有圖片，按右邊「＋」加入。" : "還沒有圖片。" }));
-      } else {
-        var grid = h("div", { class: "gallery-grid small" });
-        mine.forEach(function (g) {
-          var cell = h("figure", { class: "gallery-cell" });
-          var frame = h("div", { class: "gallery-frame" });
-          frame.appendChild(h("img", { src: g.image, alt: g.title || "", loading: "lazy" }));
-          frame.addEventListener("click", function () { openLightbox(g); });
-          cell.appendChild(frame);
-          if (g.title) cell.appendChild(h("figcaption", { class: "gallery-title", text: g.title }));
-          grid.appendChild(cell);
-        });
-        tabBody.appendChild(grid);
-      }
-      if (editMode) tabBody.appendChild(editButton("＋ 加入圖片", function () { editGallery(null, id); }));
-    }
+    /* 角色頁不再顯示畫廊分頁：圖片統一在「畫廊」頁管理 */
   }
 
   page.appendChild(tabBar);
@@ -2158,7 +2201,12 @@ function characterChips(csvIds) {
 /* ── 時間綫節點選項 ───────────────────────── */
 function eventOptions() {
   return S.events.map(function (e) {
-    return { value: e.id, label: (e.date ? e.date + " · " : "") + (e.title || "未命名節點") };
+    var personal = String(e.scope || "") === "personal";
+    var datePart = e.date ? e.date + " · " : "";
+    return {
+      value: e.id,
+      label: (personal ? "個人 · " : "") + datePart + (e.title || "未命名節點")
+    };
   });
 }
 
@@ -2323,19 +2371,29 @@ function timelinePage() {
   var head = h("div", { class: "page-head" });
   head.appendChild(h("h1", { text: "時間綫" }));
   head.appendChild(editButton("＋ 新增節點", function () { editEvent(null); }));
-  head.appendChild(h("span", { class: "page-sub", text: S.events.length + " 個節點" }));
+
+  var worldEvents = S.events.filter(function (e) { return String(e.scope || "") !== "personal"; });
+  var personalCount = S.events.length - worldEvents.length;
+
+  head.appendChild(h("span", {
+    class: "page-sub",
+    text: worldEvents.length + " 個節點" + (personalCount ? " · 另有 " + personalCount + " 個個人事件（只在角色頁）" : "")
+  }));
   page.appendChild(head);
 
-  if (!S.events.length) {
+  if (!worldEvents.length) {
     page.appendChild(h("div", {
       class: "empty",
-      text: editMode ? "還沒有節點，點右上「＋ 新增節點」。" : "這條時間綫還是空的。"
+      text: editMode
+        ? "還沒有全體事件。點右上「＋ 新增節點」；個人經歷可在節點裡選「個人事件」，就不會出現在這裡。"
+        : "這條時間綫還是空的。"
     }));
     return page;
   }
 
   var line = h("div", { class: "timeline" });
-  S.events.forEach(function (ev, i) {
+  worldEvents.forEach(function (ev) {
+    var i = S.events.indexOf(ev);
     var item = h("div", { class: "tl-item" });
     var marker = h("div", { class: "tl-marker" });
     marker.appendChild(h("span", { class: "tl-dot" }));
@@ -2359,9 +2417,13 @@ function timelinePage() {
     if (ev.body) body.appendChild(richText(ev.body, "tl-text"));
     if (csv(ev.characters).length) body.appendChild(characterChips(ev.characters));
 
-    /* 綁定在這個節點上的故事與圖片 */
-    var boundStories = S.stories.filter(function (s) { return s.eventId === ev.id; });
-    var boundGallery = S.gallery.filter(function (g) { return g.eventId === ev.id; });
+    /* 綁定在這個節點上的故事與圖片（個人素材不進全員時間綫） */
+    var boundStories = S.stories.filter(function (s) {
+      return s.eventId === ev.id && String(s.scope || "") !== "personal";
+    });
+    var boundGallery = visibleGallery().filter(function (g) {
+      return g.eventId === ev.id && String(g.scope || "") !== "personal";
+    });
 
     /* 小插圖：優先取這個節點綁定的第一張圖 */
     if (boundGallery.length && boundGallery[0].image) {
@@ -2400,7 +2462,14 @@ function galleryPage() {
   var head = h("div", { class: "page-head" });
   head.appendChild(h("h1", { text: "畫廊" }));
   head.appendChild(editButton("＋ 新增圖片", function () { editGallery(null); }));
-  head.appendChild(h("span", { class: "page-sub", text: S.gallery.length + " 張" }));
+
+  var vis = visibleGallery();
+  head.appendChild(h("span", {
+    class: "page-sub",
+    text: editMode
+      ? vis.length + " / " + S.gallery.length + " 張展示"
+      : vis.length + " 張"
+  }));
   page.appendChild(head);
 
   if (!S.gallery.length) {
@@ -2411,30 +2480,83 @@ function galleryPage() {
     return page;
   }
 
-  var grid = h("div", { class: "gallery-grid" });
+  /* 分類 chips */
+  var groups = [];
   S.gallery.forEach(function (g) {
-    var cell = h("figure", { class: "gallery-cell" });
-    var frame = h("div", { class: "gallery-frame" });
-    frame.appendChild(h("img", { src: g.image, alt: g.title || "", loading: "lazy" }));
-    if (editMode) {
-      var tools = h("div", { class: "tools show" });
-      tools.appendChild(h("button", { class: "btn small", text: "編輯", onclick: function (e) { e.stopPropagation(); editGallery(g.id); } }));
-      tools.appendChild(h("button", { class: "btn small danger", text: "刪除", onclick: function (e) { e.stopPropagation(); deleteGallery(g.id); } }));
-      frame.appendChild(tools);
-    }
-    frame.addEventListener("click", function () { if (editMode) return; openLightbox(g); });
-    cell.appendChild(frame);
-
-    if (g.title || g.caption) {
-      var cap = h("figcaption");
-      if (g.title) cap.appendChild(h("div", { class: "gallery-title", text: g.title }));
-      if (g.caption) cap.appendChild(h("div", { class: "gallery-cap", text: g.caption }));
-      cell.appendChild(cap);
-    }
-    if (csv(g.characters).length) cell.appendChild(characterChips(g.characters));
-    grid.appendChild(cell);
+    var gr = String(g.group || "").trim();
+    if (gr && gr !== "不展示" && groups.indexOf(gr) < 0) groups.push(gr);
   });
+
+  var state = { group: "" };
+  var chips = h("div", { class: "filter-chips" });
+  function paintChips() {
+    chips.innerHTML = "";
+    function mk(label, value) {
+      var b = h("button", { class: "filter-chip" + (state.group === value ? " on" : ""), text: label });
+      b.addEventListener("click", function () { state.group = value; paintChips(); draw(); });
+      return b;
+    }
+    chips.appendChild(mk("全部", ""));
+    groups.forEach(function (gr) { chips.appendChild(mk(gr, gr)); });
+    if (editMode) chips.appendChild(mk("不展示", "__hidden"));
+  }
+  page.appendChild(chips);
+
+  var grid = h("div", { class: "gallery-grid" });
   page.appendChild(grid);
+
+  function draw() {
+    grid.innerHTML = "";
+    var list = S.gallery.filter(function (g) {
+      var hid = galleryHidden(g);
+      if (!editMode && hid) return false;
+      if (state.group === "__hidden") return hid;
+      if (state.group && String(g.group || "").trim() !== state.group) return false;
+      return true;
+    });
+
+    if (!list.length) {
+      grid.appendChild(h("div", {
+        class: "empty",
+        text: state.group === "__hidden" ? "沒有被設為不展示的圖片。" : "這個分類還沒有圖片。"
+      }));
+      return;
+    }
+
+    list.forEach(function (g) {
+      var hid = galleryHidden(g);
+      var cell = h("figure", { class: "gallery-cell" + (hid ? " is-hidden" : "") });
+      var frame = h("div", { class: "gallery-frame" });
+      frame.appendChild(h("img", { src: g.image, alt: g.title || "", loading: "lazy" }));
+      if (hid) frame.appendChild(h("span", { class: "hidden-tag", text: "不展示" }));
+
+      if (editMode) {
+        var tools = h("div", { class: "tools show" });
+        tools.appendChild(h("button", { class: "btn small", text: "編輯", onclick: function (e) { e.stopPropagation(); editGallery(g.id); } }));
+        tools.appendChild(h("button", { class: "btn small danger", text: "刪除", onclick: function (e) { e.stopPropagation(); deleteGallery(g.id); } }));
+        frame.appendChild(tools);
+      }
+      frame.addEventListener("click", function () { if (editMode) return; openLightbox(g); });
+      cell.appendChild(frame);
+
+      if (g.title || g.caption) {
+        var cap = h("figcaption");
+        if (g.title) cap.appendChild(h("div", { class: "gallery-title", text: g.title }));
+        if (g.caption) cap.appendChild(h("div", { class: "gallery-cap", text: g.caption }));
+        cell.appendChild(cap);
+      }
+
+      var gr2 = String(g.group || "").trim();
+      if (gr2) {
+        cell.appendChild(h("div", { class: "chips" }, h("span", { class: "chip", text: gr2 })));
+      }
+      if (csv(g.characters).length) cell.appendChild(characterChips(g.characters));
+      grid.appendChild(cell);
+    });
+  }
+
+  paintChips();
+  draw();
   return page;
 }
 
@@ -3060,7 +3182,7 @@ var homeRandomTimer = null;
 function randomPool() {
   var avatars = {};
   S.characters.forEach(function (c) { if (c.image) avatars[c.image] = 1; });
-  return S.gallery.filter(function (g) { return g.image && !avatars[g.image]; });
+  return visibleGallery().filter(function (g) { return g.image && !avatars[g.image]; });
 }
 
 function heroBackdrop() {
@@ -3124,6 +3246,7 @@ function storiesPage() {
     var chapters = splitChapters(s);
     var readCount = chapters.filter(function (ch) { return isRead(s.id, ch.index); }).length;
     var povs = storyPovs(s);
+    var single = !chapters.explicit && chapters.length === 1;
 
     var box = h("div", { class: "card story-block" });
 
@@ -3132,8 +3255,9 @@ function storiesPage() {
       h("h3", { text: s.title || "未命名故事" })));
     if (s.form && s.form !== "敘述") top.appendChild(h("span", { class: "badge form", text: s.form }));
     if (povs.length > 1) top.appendChild(h("span", { class: "badge pov", text: "多視角 " + povs.length }));
-    top.appendChild(h("span", { class: "badge", text: chapters.length + " 章" }));
-    top.appendChild(h("span", { class: "badge read", text: readCount + "/" + chapters.length + " 已讀" }));
+    if (String(s.scope || "") === "personal") top.appendChild(h("span", { class: "badge", text: "個人" }));
+    top.appendChild(h("span", { class: "badge", text: single ? "短篇" : chapters.length + " 章" }));
+    top.appendChild(h("span", { class: "badge read", text: single && readCount ? "已讀" : readCount + "/" + chapters.length + " 已讀" }));
 
     var acts = h("div", { class: "row-actions" });
     acts.appendChild(h("a", {
@@ -3161,8 +3285,8 @@ function storiesPage() {
       var done = isRead(s.id, ch.index);
       var row = h("div", { class: "chapter-row" + (done ? " done" : "") });
       var link = h("a", { class: "chapter-link", href: "#/stories/" + s.id + "/" + ch.index });
-      link.appendChild(h("span", { class: "chapter-idx", text: ("0" + (ch.index + 1)).slice(-2) }));
-      link.appendChild(h("span", { class: "chapter-title", text: ch.title }));
+      if (!single) link.appendChild(h("span", { class: "chapter-idx", text: ("0" + (ch.index + 1)).slice(-2) }));
+      link.appendChild(h("span", { class: "chapter-title", text: ch.title || (single ? "正文" : "第 " + (ch.index + 1) + " 章") }));
       row.appendChild(link);
       row.appendChild(h("span", {
         class: "chapter-meta",
@@ -3223,6 +3347,7 @@ function storyPage(id, sub) {
   if (isNaN(idx)) idx = 0;
   idx = clamp(idx, 0, chapters.length - 1);
   var ch = chapters[idx];
+  var single = !chapters.explicit && chapters.length === 1;
   markRead(s.id, idx, true);
 
   var reader = h("div", { class: "reader" });
@@ -3256,7 +3381,7 @@ function storyPage(id, sub) {
     var pcv = s.pov ? byId(S.characters, s.pov) : null;
     metaRow.appendChild(h("span", { class: "badge pov", text: "視角：" + (pcv ? pcv.name : povLabel(s)) }));
   }
-  metaRow.appendChild(h("span", { class: "badge", text: "第 " + (idx + 1) + "／" + chapters.length + " 章" }));
+  if (!single) metaRow.appendChild(h("span", { class: "badge", text: "第 " + (idx + 1) + "／" + chapters.length + " 章" }));
   metaRow.appendChild(h("span", { class: "badge", text: ch.chars.toLocaleString() + " 字" }));
   if (ch.date) metaRow.appendChild(h("span", { class: "badge", text: ch.date }));
   var boundEv = byId(S.events, s.eventId);
@@ -3274,29 +3399,31 @@ function storyPage(id, sub) {
   head.appendChild(acts);
   reader.appendChild(head);
 
-  /* ── 章節選擇列 ── */
-  var bar = h("div", { class: "chapter-bar" });
-  var sel = h("select", {});
-  chapters.forEach(function (c2, i) {
-    var opt = h("option", { value: String(i), text: ("0" + (i + 1)).slice(-2) + " · " + c2.title });
-    if (i === idx) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  sel.addEventListener("change", function () {
-    location.hash = "#/stories/" + s.id + "/" + sel.value;
-  });
-  bar.appendChild(sel);
+  /* ── 章節選擇列（短篇不顯示）── */
+  if (!single) {
+    var bar = h("div", { class: "chapter-bar" });
+    var sel = h("select", {});
+    chapters.forEach(function (c2, i) {
+      var opt = h("option", { value: String(i), text: ("0" + (i + 1)).slice(-2) + " · " + (c2.title || "第 " + (i + 1) + " 章") });
+      if (i === idx) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", function () {
+      location.hash = "#/stories/" + s.id + "/" + sel.value;
+    });
+    bar.appendChild(sel);
 
-  var dot = h("button", {
-    class: "read-dot" + (isRead(s.id, idx) ? " on" : ""),
-    text: isRead(s.id, idx) ? "已讀" : "未讀"
-  });
-  dot.addEventListener("click", function () {
-    markRead(s.id, idx, !isRead(s.id, idx));
-    render();
-  });
-  bar.appendChild(dot);
-  reader.appendChild(bar);
+    var dot = h("button", {
+      class: "read-dot" + (isRead(s.id, idx) ? " on" : ""),
+      text: isRead(s.id, idx) ? "已讀" : "未讀"
+    });
+    dot.addEventListener("click", function () {
+      markRead(s.id, idx, !isRead(s.id, idx));
+      render();
+    });
+    bar.appendChild(dot);
+    reader.appendChild(bar);
+  }
 
   /* ── 正文（依體裁給版式；信件／日記／檔案加打字機） ── */
   var bodyWrap = h("div", { class: "story-body" });
@@ -3338,28 +3465,777 @@ function storyPage(id, sub) {
   var who = csv(s.characters).map(function (cid) { return byId(S.characters, cid); }).filter(Boolean);
   if (who.length) reader.appendChild(characterChips(s.characters));
 
-  /* ── 上一章／下一章 ── */
-  var nav = h("div", { class: "chapter-nav" });
-  var prev = h("a", {
-    class: "btn" + (idx <= 0 ? " disabled" : ""),
-    href: idx > 0 ? "#/stories/" + s.id + "/" + (idx - 1) : "#/stories/" + s.id + "/0",
-    text: "← 上一章"
-  });
-  nav.appendChild(prev);
-  nav.appendChild(h("span", {
-    class: "nav-mid",
-    text: (idx + 1) + " / " + chapters.length
-  }));
-  var next = h("a", {
-    class: "btn" + (idx >= chapters.length - 1 ? " disabled" : ""),
-    href: idx < chapters.length - 1 ? "#/stories/" + s.id + "/" + (idx + 1) : "#/stories/" + s.id + "/" + idx,
-    text: "下一章 →"
-  });
-  nav.appendChild(next);
-  reader.appendChild(nav);
+  /* ── 上一章／下一章（短篇不顯示）── */
+  if (!single) {
+    var nav = h("div", { class: "chapter-nav" });
+    var prev = h("a", {
+      class: "btn" + (idx <= 0 ? " disabled" : ""),
+      href: idx > 0 ? "#/stories/" + s.id + "/" + (idx - 1) : "#/stories/" + s.id + "/0",
+      text: "← 上一章"
+    });
+    nav.appendChild(prev);
+    nav.appendChild(h("span", {
+      class: "nav-mid",
+      text: (idx + 1) + " / " + chapters.length
+    }));
+    var next = h("a", {
+      class: "btn" + (idx >= chapters.length - 1 ? " disabled" : ""),
+      href: idx < chapters.length - 1 ? "#/stories/" + s.id + "/" + (idx + 1) : "#/stories/" + s.id + "/" + idx,
+      text: "下一章 →"
+    });
+    nav.appendChild(next);
+    reader.appendChild(nav);
+  }
 
   page.appendChild(reader);
   return page;
+}
+
+/* ── 畫廊可見性與分類 ───────────────────── */
+function galleryHidden(g) {
+  var flag = String((g && g.hidden) || "").toLowerCase();
+  if (flag === "1" || flag === "true" || flag === "yes") return true;
+  return String((g && g.group) || "").trim() === "不展示";
+}
+
+function visibleGallery() {
+  return S.gallery.filter(function (g) { return !galleryHidden(g); });
+}
+
+/* ── 形態圖片裁切編輯器 ─────────────────── */
+function openFormFrameEditor(cid) {
+  var c = byId(S.characters, cid);
+  if (!c) return;
+  if (!canEdit()) { toast("唯讀模式無法編輯", true); return; }
+  var list = parseForms(c.forms);
+  if (!list.length) { toast("先新增形態，才需要調畫面", true); return; }
+
+  var host = el("modalHost");
+  host.innerHTML = "";
+  var cur = 0;
+
+  var sel = h("select", {});
+  list.forEach(function (f, i) {
+    sel.appendChild(h("option", { value: String(i), text: f.name || ("形態 " + (i + 1)) }));
+  });
+
+  var stage = h("div", { class: "frame-stage" });
+  var img = h("img", { alt: "" });
+  stage.appendChild(img);
+
+  /* 直接拖動畫面 = 手動移動取景；滾輪 = 縮放 */
+  var drag = null;
+  stage.style.touchAction = "none";
+
+  stage.addEventListener("pointerdown", function (ev) {
+    var f = list[cur];
+    if (!f.image) return;
+    drag = { cx: ev.clientX, cy: ev.clientY, ox: f.x, oy: f.y };
+    try { stage.setPointerCapture(ev.pointerId); } catch (e) { /* 忽略 */ }
+    stage.classList.add("dragging");
+    ev.preventDefault();
+  });
+
+  stage.addEventListener("pointermove", function (ev) {
+    if (!drag) return;
+    var f = list[cur];
+    var r = stage.getBoundingClientRect();
+    var zf = Math.max(1, clampNum(f.zoom, 1, 1, 4) * 0.85);
+    var dxPct = -((ev.clientX - drag.cx) / Math.max(1, r.width)) * 100 / zf;
+    var dyPct = -((ev.clientY - drag.cy) / Math.max(1, r.height)) * 100 / zf;
+    f.x = clampNum(drag.ox + dxPct, 50, 0, 100);
+    f.y = clampNum(drag.oy + dyPct, 50, 0, 100);
+    syncAll();
+    paint();
+  });
+
+  function endDrag() {
+    drag = null;
+    stage.classList.remove("dragging");
+  }
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
+  stage.addEventListener("pointerleave", function () { if (drag) endDrag(); });
+
+  stage.addEventListener("wheel", function (ev) {
+    var f = list[cur];
+    if (!f.image) return;
+    ev.preventDefault();
+    f.zoom = clampNum(f.zoom + (ev.deltaY < 0 ? 0.05 : -0.05), 1, 1, 4);
+    syncAll();
+    paint();
+  }, { passive: false });
+
+  var rowsHost = h("div", { class: "frame-rows" });
+  var syncers = [];
+
+  function paint() {
+    var f = list[cur];
+    stage.style.aspectRatio = ratioCss(f.ratio);
+    if (f.image) {
+      img.src = f.image;
+      img.style.display = "";
+      applyFrame(img, f);
+    } else {
+      img.removeAttribute("src");
+      img.style.display = "none";
+    }
+  }
+
+  function slider(label, key, min, max, step) {
+    var row = h("label", { class: "frame-row" });
+    row.appendChild(h("span", { class: "frame-label", text: label }));
+    var input = h("input", { type: "range", min: String(min), max: String(max), step: String(step) });
+    var val = h("span", { class: "frame-val", text: "" });
+
+    function sync() {
+      var v = clampNum(list[cur][key], key === "zoom" ? 1 : 50, min, max);
+      input.value = String(v);
+      val.textContent = key === "zoom" ? v.toFixed(2) : String(Math.round(v));
+    }
+    input.addEventListener("input", function () {
+      var n = parseFloat(input.value);
+      if (isNaN(n)) n = key === "zoom" ? 1 : 50;
+      list[cur][key] = n;
+      val.textContent = key === "zoom" ? n.toFixed(2) : String(Math.round(n));
+      paint();
+    });
+
+    row.appendChild(input);
+    row.appendChild(val);
+    syncers.push(sync);
+    sync();
+    return row;
+  }
+
+  function flipButtons() {
+    var row = h("div", { class: "frame-row" });
+    row.appendChild(h("span", { class: "frame-label", text: "翻轉" }));
+    var group = h("span", { class: "frame-flip" });
+    var btns = {};
+    [["0", "無"], ["h", "水平"], ["v", "垂直"], ["hv", "兩者"]].forEach(function (pair) {
+      var b = h("button", { type: "button", class: "btn small", text: pair[1] });
+      b.addEventListener("click", function () {
+        list[cur].flip = pair[0];
+        mark();
+        paint();
+      });
+      btns[pair[0]] = b;
+      group.appendChild(b);
+    });
+    function mark() {
+      var fp = String(list[cur].flip || "0");
+      Object.keys(btns).forEach(function (k) { btns[k].classList.toggle("primary", fp === k); });
+    }
+    row.appendChild(group);
+    syncers.push(mark);
+    mark();
+    return row;
+  }
+
+  function ratioSelect() {
+    var row = h("div", { class: "frame-row" });
+    row.appendChild(h("span", { class: "frame-label", text: "比例" }));
+    var s2 = h("select", {});
+    ["3:4", "4:3", "1:1", "16:9", "9:16"].forEach(function (r) {
+      s2.appendChild(h("option", { value: r, text: r }));
+    });
+    s2.addEventListener("change", function () {
+      list[cur].ratio = s2.value;
+      paint();
+    });
+    row.appendChild(s2);
+    syncers.push(function () { s2.value = list[cur].ratio || "3:4"; });
+    s2.value = list[cur].ratio || "3:4";
+    return row;
+  }
+
+  function syncAll() {
+    syncers.forEach(function (fn) { fn(); });
+  }
+
+  var rowZoom = slider("縮放", "zoom", 1, 4, 0.05);
+  var rowX = slider("水平", "x", 0, 100, 1);
+  var rowY = slider("垂直", "y", 0, 100, 1);
+  var rowRot = slider("旋轉", "rot", -180, 180, 1);
+  var rowFlip = flipButtons();
+  var rowRatio = ratioSelect();
+
+  rowsHost.appendChild(rowZoom);
+  rowsHost.appendChild(rowX);
+  rowsHost.appendChild(rowY);
+  rowsHost.appendChild(rowRot);
+  rowsHost.appendChild(rowFlip);
+  rowsHost.appendChild(rowRatio);
+
+  sel.addEventListener("change", function () {
+    cur = parseInt(sel.value, 10) || 0;
+    syncAll();
+    paint();
+  });
+
+  var reset = h("button", { type: "button", class: "btn small", text: "重設" });
+  reset.addEventListener("click", function () {
+    list[cur].zoom = 1;
+    list[cur].x = 50;
+    list[cur].y = 50;
+    list[cur].rot = 0;
+    list[cur].flip = "0";
+    list[cur].ratio = "3:4";
+    syncAll();
+    paint();
+  });
+
+  var cancel = h("button", { type: "button", class: "btn", text: "取消" });
+  var save = h("button", { type: "button", class: "btn primary", text: "儲存" });
+  var actions = h("div", { class: "modal-actions" }, reset, cancel, save);
+
+  var modal = h("div", { class: "modal frame-modal" },
+    h("h2", { text: "調整形態畫面" }),
+    h("p", { class: "modal-hint", text: "直接在畫面上拖動＝移動取景，滾輪＝縮放。下面的滑桿與翻轉、比例可以再微調。" }),
+    h("div", { class: "frame-pick" }, h("span", { class: "frame-label", text: "形態" }), sel),
+    stage,
+    rowsHost,
+    actions
+  );
+
+  var overlay = h("div", { class: "modal-overlay" }, modal);
+  function close() { host.innerHTML = ""; }
+  cancel.addEventListener("click", close);
+  overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+
+  save.addEventListener("click", function () {
+    save.disabled = true;
+    save.textContent = "儲存中…";
+    mutate("updateCharacter", { id: cid, forms: formsText(list) })
+      .then(function () { toast("已更新形態畫面"); return load(); })
+      .then(close)
+      .catch(function (err) {
+        reportErr(err);
+        save.disabled = false;
+        save.textContent = "儲存";
+      });
+  });
+
+  host.appendChild(overlay);
+  paint();
+}
+
+/* ── 一鍵備份 ───────────────────────────── */
+function backupWorld() {
+  var data = S.raw || {};
+  if (!data || !Object.keys(data).length) { toast("還沒有資料可以備份", true); return; }
+  var d = new Date();
+  function p2(n) { return (n < 10 ? "0" : "") + n; }
+  var stamp = d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + "-" + p2(d.getHours()) + p2(d.getMinutes());
+  var text = JSON.stringify(data, null, 2) + "\n";
+  var blob = new Blob([text], { type: "application/json;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "world-" + stamp + ".json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+  toast("已下載備份：world-" + stamp + ".json");
+}
+
+/* ── 台詞牆 ─────────────────────────────── */
+function allQuotes() {
+  var out = [];
+  S.characters.forEach(function (c) {
+    String(c.quotes || "").split("\n").map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (line) {
+      var parts = line.split("|");
+      out.push({
+        cid: c.id,
+        char: c,
+        name: c.name || "未命名",
+        text: parts[0].trim(),
+        audio: (parts[1] || "").trim()
+      });
+    });
+  });
+  return out;
+}
+
+function quotesPage() {
+  var page = h("div", { class: "page quotes-page" });
+  var head = h("div", { class: "page-head" });
+  head.appendChild(h("h1", { text: "台詞" }));
+
+  var all = allQuotes();
+  head.appendChild(h("span", {
+    class: "page-sub",
+    text: all.length ? all.length + " 句 · " + S.characters.length + " 位角色" : "還沒有台詞"
+  }));
+  head.appendChild(editButton("編輯台詞", function () {
+    if (!S.characters.length) { toast("先新增人物", true); return; }
+    toast("在人物頁選一位角色，切到「台詞」分頁即可就地編輯");
+  }));
+  page.appendChild(head);
+
+  if (!all.length) {
+    page.appendChild(h("div", {
+      class: "empty",
+      text: editMode
+        ? "還沒有任何台詞。到人物頁 → 選角色 →「台詞」分頁，直接在氣泡裡輸入。"
+        : "這個世界還沒有留下任何一句話。"
+    }));
+    return page;
+  }
+
+  var state = { cid: "" };
+  var chips = h("div", { class: "filter-chips" });
+  function paintChips() {
+    chips.innerHTML = "";
+    function mk(label, value) {
+      var b = h("button", { class: "filter-chip" + (state.cid === value ? " on" : ""), text: label });
+      b.addEventListener("click", function () { state.cid = value; paintChips(); draw(); });
+      return b;
+    }
+    chips.appendChild(mk("全部 " + all.length, ""));
+    S.characters.forEach(function (c) {
+      var n = all.filter(function (q) { return q.cid === c.id; }).length;
+      if (n) chips.appendChild(mk((c.name || "未命名") + " " + n, c.id));
+    });
+  }
+  page.appendChild(chips);
+
+  var wall = h("div", { class: "quote-wall" });
+  page.appendChild(wall);
+
+  function draw() {
+    wall.innerHTML = "";
+    var list = all.filter(function (q) { return !state.cid || q.cid === state.cid; });
+    if (!list.length) {
+      wall.appendChild(h("div", { class: "empty", text: "這位角色還沒有台詞。" }));
+      return;
+    }
+    list.forEach(function (q) {
+      var bubble = h("div", { class: "quote-bubble" });
+      var av = h("a", { class: "avatar quote-avatar", href: "#/characters/" + q.cid });
+      if (String(q.char.image || "").trim()) av.appendChild(h("img", { src: q.char.image, alt: q.name }));
+      else av.textContent = q.name.slice(0, 1);
+      bubble.appendChild(av);
+
+      var body = h("div", { class: "quote-body" });
+      body.appendChild(h("p", { class: "quote-text", text: "「" + q.text + "」" }));
+
+      var meta = h("div", { class: "quote-meta" });
+      meta.appendChild(h("a", { class: "who", href: "#/characters/" + q.cid, text: q.name }));
+      if (q.char.alias) meta.appendChild(h("span", { class: "alias", text: "「" + q.char.alias + "」" }));
+      body.appendChild(meta);
+
+      if (q.audio) {
+        var playBtn = h("button", { class: "quote-play", text: "▶ 播放" });
+        playBtn.addEventListener("click", function () {
+          if (isChatCard()) { toast("聊天卡片裡不播放聲音", true); return; }
+          var a = registerAudio(new Audio(q.audio));
+          playFade(a, MUSIC_VOLUME);
+          playBtn.textContent = "播放中…";
+          a.addEventListener("ended", function () { playBtn.textContent = "▶ 播放"; });
+          a.addEventListener("pause", function () { playBtn.textContent = "▶ 播放"; });
+        });
+        body.appendChild(playBtn);
+      }
+
+      bubble.appendChild(body);
+      wall.appendChild(bubble);
+    });
+  }
+
+  paintChips();
+  draw();
+  return page;
+}
+
+/* ── 全站搜尋 ───────────────────────────── */
+function searchSnippet(text, q) {
+  var s = String(text || "").replace(/\s+/g, " ").trim();
+  var i = s.toLowerCase().indexOf(q.toLowerCase());
+  if (i < 0) return s.slice(0, 60);
+  var from = Math.max(0, i - 24);
+  return (from > 0 ? "…" : "") + s.slice(from, from + 70) + (s.length > from + 70 ? "…" : "");
+}
+
+function searchAll(q) {
+  var key = String(q || "").trim().toLowerCase();
+  if (!key) return [];
+  var hits = [];
+
+  S.characters.forEach(function (c) {
+    var hay = [c.name, c.alias, c.role, c.faction, c.tags, c.summary, c.personality,
+      c.catchphrase, c.quotes, c.trivia, c.story, c.hobby].join(" ").toLowerCase();
+    if (hay.indexOf(key) >= 0) {
+      hits.push({
+        type: "人物", label: "人物",
+        title: c.name || "未命名",
+        sub: c.summary || c.role || "",
+        href: "#/characters/" + c.id
+      });
+    }
+  });
+
+  S.entries.forEach(function (e) {
+    var hay = [e.title, e.category, e.summary, e.body].join(" ").toLowerCase();
+    if (hay.indexOf(key) >= 0) {
+      hits.push({
+        type: "詞條", label: e.category || "詞條",
+        title: e.title || "未命名詞條",
+        sub: searchSnippet(e.summary || e.body, key),
+        href: "#/wiki/" + e.id
+      });
+    }
+  });
+
+  S.stories.forEach(function (s) {
+    var hay = [s.title, s.body, s.tags].join(" ").toLowerCase();
+    if (hay.indexOf(key) >= 0) {
+      hits.push({
+        type: "故事", label: s.form || "故事",
+        title: s.title || "未命名故事",
+        sub: searchSnippet(s.body, key),
+        href: "#/stories/" + s.id + "/0"
+      });
+    }
+  });
+
+  S.events.forEach(function (ev) {
+    var hay = [ev.title, ev.date, ev.body].join(" ").toLowerCase();
+    if (hay.indexOf(key) >= 0) {
+      hits.push({
+        type: "時間綫", label: ev.date || "時間綫",
+        title: ev.title || "未命名節點",
+        sub: searchSnippet(ev.body, key),
+        href: "#/timeline"
+      });
+    }
+  });
+
+  S.places.forEach(function (p) {
+    var hay = [p.name, p.category, p.note].join(" ").toLowerCase();
+    if (hay.indexOf(key) >= 0) {
+      hits.push({
+        type: "地點", label: p.category || "地點",
+        title: p.name || "未命名地點",
+        sub: searchSnippet(p.note, key),
+        href: "#/map"
+      });
+    }
+  });
+
+  S.music.forEach(function (m) {
+    var hay = [m.title, m.src, scopeLabel(m.page)].join(" ").toLowerCase();
+    if (hay.indexOf(key) >= 0) {
+      hits.push({
+        type: "音樂", label: scopeLabel(m.page),
+        title: m.title || (m.src || "").split("/").pop() || "未命名",
+        sub: m.src || "",
+        href: "#/music"
+      });
+    }
+  });
+
+  return hits;
+}
+
+function searchPage(initial) {
+  var page = h("div", { class: "page search-page" });
+  var head = h("div", { class: "page-head" });
+  head.appendChild(h("h1", { text: "搜尋" }));
+  page.appendChild(head);
+
+  var box = h("div", { class: "search-box" });
+  var input = h("input", {
+    class: "input search-input",
+    type: "search",
+    placeholder: "搜角色、詞條、故事、時間綫、地點、音樂…"
+  });
+  input.value = initial ? decodeURIComponent(initial) : "";
+  box.appendChild(input);
+  page.appendChild(box);
+
+  var info = h("p", { class: "page-sub search-info", text: "" });
+  page.appendChild(info);
+
+  var host = h("div", { class: "search-results" });
+  page.appendChild(host);
+
+  function draw() {
+    var q = String(input.value || "").trim();
+    host.innerHTML = "";
+    if (!q) {
+      info.textContent = "輸入關鍵字即時搜尋全站。";
+      return;
+    }
+    var hits = searchAll(q);
+    info.textContent = hits.length ? "找到 " + hits.length + " 項" : "找不到「" + q + "」";
+
+    if (!hits.length) {
+      host.appendChild(h("div", { class: "empty", text: "沒有符合的內容。" }));
+      return;
+    }
+
+    var order = ["人物", "詞條", "故事", "時間綫", "地點", "音樂"];
+    order.forEach(function (type) {
+      var group = hits.filter(function (x) { return x.type === type; });
+      if (!group.length) return;
+      host.appendChild(h("div", { class: "search-group-title", text: type + "（" + group.length + "）" }));
+      group.forEach(function (x) {
+        var row = h("a", { class: "search-row", href: x.href });
+        var badge = h("span", { class: "song-badge", text: x.label });
+        row.appendChild(badge);
+        var main = h("div", { class: "search-main" });
+        main.appendChild(h("b", { class: "search-title", text: x.title }));
+        if (x.sub) main.appendChild(h("span", { class: "search-sub", text: x.sub }));
+        row.appendChild(main);
+        host.appendChild(row);
+      });
+    });
+  }
+
+  input.addEventListener("input", draw);
+  draw();
+  setTimeout(function () { input.focus(); input.select(); }, 60);
+  return page;
+}
+
+/* ── 把已有的故事／圖片綁到節點 ─────────── */
+function pickExistingForEvent(kind, eventId, charId) {
+  if (!canEdit()) { toast("唯讀模式無法編輯", true); return; }
+
+  var items = kind === "story" ? S.stories : S.gallery;
+  if (!items.length) {
+    toast(kind === "story" ? "還沒有任何故事可以選" : "畫廊還是空的", true);
+    return;
+  }
+
+  var host = el("modalHost");
+  host.innerHTML = "";
+
+  var checked = {};
+  var listBox = h("div", { class: "pick-list" });
+
+  items.forEach(function (it) {
+    var row = h("label", { class: "pick-row" });
+    var cb = h("input", { type: "checkbox" });
+    cb.addEventListener("change", function () { checked[it.id] = cb.checked; });
+    row.appendChild(cb);
+
+    if (kind === "gallery" && it.image) {
+      row.appendChild(h("img", { class: "pick-thumb", src: it.image, alt: "" }));
+    }
+
+    var textBox = h("span", { class: "pick-text" });
+    var title = kind === "story"
+      ? (it.title || "未命名故事")
+      : (it.title || (it.image || "").split("/").pop() || "未命名圖片");
+    textBox.appendChild(h("b", { class: "pick-title", text: title }));
+
+    var boundEv = byId(S.events, it.eventId);
+    textBox.appendChild(h("span", {
+      class: "pick-meta",
+      text: boundEv ? "已綁定：" + (boundEv.title || "未命名節點") : "尚未綁定時間綫"
+    }));
+    row.appendChild(textBox);
+    listBox.appendChild(row);
+  });
+
+  var cancel = h("button", { type: "button", class: "btn", text: "取消" });
+  var ok = h("button", { type: "button", class: "btn primary", text: "加入這個節點" });
+
+  var modal = h("div", { class: "modal pick-modal" },
+    h("h2", { text: kind === "story" ? "選已有故事" : "選已有圖片" }),
+    h("p", { class: "modal-hint", text: "勾選後會把它的「綁定時間綫」改成這個節點；原本綁在別處的會一併移過來。" }),
+    listBox,
+    h("div", { class: "modal-actions" }, cancel, ok)
+  );
+
+  var overlay = h("div", { class: "modal-overlay" }, modal);
+  function close() { host.innerHTML = ""; }
+  cancel.addEventListener("click", close);
+  overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+
+  ok.addEventListener("click", function () {
+    var ids = Object.keys(checked).filter(function (k) { return checked[k]; });
+    if (!ids.length) { toast("沒有選任何項目", true); return; }
+
+    ok.disabled = true;
+    ok.textContent = "加入中…";
+
+    var chain = Promise.resolve();
+    ids.forEach(function (id) {
+      var it = byId(items, id);
+      if (!it) return;
+      var args = { id: id, eventId: eventId };
+      if (charId) {
+        var who = csv(it.characters);
+        if (who.indexOf(charId) < 0) {
+          who.push(charId);
+          args.characters = who.join(",");
+        }
+      }
+      chain = chain.then(function () {
+        return mutate(kind === "story" ? "updateStory" : "updateGallery", args);
+      });
+    });
+
+    chain
+      .then(function () { toast("已加入這個時間綫節點"); return load(); })
+      .then(close)
+      .catch(function (err) {
+        reportErr(err);
+        ok.disabled = false;
+        ok.textContent = "加入這個節點";
+      });
+  });
+
+  host.appendChild(overlay);
+}
+
+/* ── 文遊（預留位置） ─────────────────────── */
+function gamePage() {
+  var page = h("div", { class: "page game-page" });
+  var head = h("div", { class: "page-head" });
+  head.appendChild(h("h1", { text: "文遊" }));
+  page.appendChild(head);
+
+  var g = (S.raw && S.raw.game) || {};
+  var ready = String(g.status || "planned") === "ready";
+
+  var box = h("div", { class: "game-hold" });
+
+  var top = h("div", { class: "game-hold-top" });
+  top.appendChild(h("span", { class: "badge " + (ready ? "read" : "pov"), text: ready ? "已開啟" : "預留位置" }));
+  if (g.title) top.appendChild(h("span", { class: "game-title", text: g.title }));
+  box.appendChild(top);
+
+  box.appendChild(richText(
+    g.note || "這裡已經預留給文字冒險遊戲。\n\n之後可以做成：章節推進、選項分歧、好感度、結局回收——直接沿用現有的角色、故事與時間綫資料，不用另外再寫一份。",
+    "game-note"
+  ));
+
+  var meta = h("div", { class: "game-meta" });
+  meta.appendChild(h("span", { text: "可用素材：" }));
+  meta.appendChild(h("b", { text: S.characters.length + " 位角色" }));
+  meta.appendChild(document.createTextNode(" · "));
+  meta.appendChild(h("b", { text: S.stories.length + " 篇故事" }));
+  meta.appendChild(document.createTextNode(" · "));
+  meta.appendChild(h("b", { text: S.events.length + " 個時間綫節點" }));
+  meta.appendChild(document.createTextNode(" · "));
+  meta.appendChild(h("b", { text: S.entries.length + " 個詞條" }));
+  box.appendChild(meta);
+
+  if (String(g.url || "").trim()) {
+    box.appendChild(h("div", { class: "hero-actions" },
+      h("a", { class: "btn primary", href: String(g.url).trim(), text: "進入遊戲" })));
+  } else {
+    box.appendChild(h("p", { class: "page-sub", text: "目前還沒有開始做——這個位置先留著。" }));
+  }
+
+  page.appendChild(box);
+
+  if (canEdit()) {
+    page.appendChild(h("div", { class: "field-btns", style: "margin-top:18px" },
+      editButton("編輯文遊設定", function () { editGame(); })));
+  }
+
+  return page;
+}
+
+function editGame() {
+  if (!canEdit()) { toast("唯讀模式無法編輯", true); return; }
+  var g = (S.raw && S.raw.game) || {};
+  openFormModal({
+    title: "文遊設定",
+    hint: "之後做好遊戲時，把網址填進「遊戲連結」，這一頁就會出現「進入遊戲」按鈕。",
+    fields: [
+      { group: "文遊", k: "title", label: "名稱", wide: true, ph: "例：考卷與冰雨" },
+      {
+        k: "status", label: "狀態", type: "select", default: "planned",
+        options: [
+          { value: "planned", label: "預留位置（還沒開始）" },
+          { value: "ready", label: "已開啟" }
+        ]
+      },
+      { k: "url", label: "遊戲連結", wide: true, ph: "例：game/index.html 或外部網址" },
+      { k: "note", label: "說明", type: "textarea", rows: 5, wide: true, ph: "空行分段；支援 **粗體**、> 引用" }
+    ],
+    item: { title: g.title || "文遊", status: g.status || "planned", url: g.url || "", note: g.note || "" },
+    onSubmit: function (values, close, resetSave) {
+      var doc = JSON.parse(JSON.stringify(S.raw || {}));
+      doc.game = { title: values.title, status: values.status, url: values.url, note: values.note };
+      if (!sdk) {
+        toast("文遊設定要在 Spherse 裡才能存檔", true);
+        resetSave();
+        return;
+      }
+      sdk.data.write
+        ? sdk.data.write({ file: DATA_FILE, data: doc })
+          .then(function () { toast("已更新文遊設定"); return load(); })
+          .then(close, resetSave)
+          .catch(function (err) { reportErr(err); resetSave(); })
+        : (function () {
+          toast("這個版本的 SDK 不支援整份寫入，請直接改 world.data.json", true);
+          resetSave();
+        })();
+    }
+  });
+}
+
+/* ── 角色面板（獨立編輯） ───────────────── */
+function charPanelFields() {
+  return [
+    { group: "印象", k: "color", label: "印象色／代表色", ph: "例：藍、桃紅色，或 #2f7f9e" },
+    { k: "voiceActor", label: "腦內聲優", ph: "例：某某聲優" },
+    { k: "imprintSong", label: "印象曲", wide: true, ph: "歌名，或 media/x.mp3" },
+
+    {
+      k: "stats", label: "能力數值（雷達圖）", type: "kv", wide: true, addLabel: "新增一項能力",
+      hint: "數值 0–5（五分制），至少 3 項才會畫出雷達圖；項目名稱可以自己改。",
+      cols: [{ label: "能力名稱" }, { label: "數值 0–5", type: "number", min: 0, max: 5 }]
+    },
+    {
+      k: "forms", label: "形態變化（滑塊對比）", type: "pipe", wide: true, addLabel: "新增一個形態",
+      hint: "兩個以上、而且都有圖片，就能左右拖動對比。存檔後可在「形態」分頁按「調整圖片畫面」拖曳取景。",
+      cols: [
+        { label: "形態名稱" },
+        { label: "圖片路徑", type: "image", wide: true },
+        { label: "縮放 1–4" },
+        { label: "水平 0–100" },
+        { label: "垂直 0–100" },
+        { label: "旋轉 -180–180" },
+        { label: "翻轉 0/h/v/hv" },
+        { label: "比例 3:4" },
+        { label: "說明", wide: true }
+      ]
+    },
+    {
+      k: "outfits", label: "服裝 / 裝備圖鑑", type: "pipe", wide: true, addLabel: "新增一套服裝 / 裝備",
+      hint: "每一套都會變成一張圖卡，點開可以看大圖與說明。",
+      cols: [{ label: "名稱" }, { label: "類型（服裝／裝備…）" }, { label: "圖片路徑", type: "image", wide: true }, { label: "說明", wide: true }]
+    }
+  ];
+}
+
+function editCharPanel(id) {
+  if (!canEdit()) { toast("唯讀模式無法編輯", true); return; }
+  var item = byId(S.characters, id);
+  if (!item) return;
+  openFormModal({
+    title: "角色面板：" + (item.name || ""),
+    hint: "這裡只放面板相關的資料（印象、數值、形態、圖鑑）。人物本身的設定請用「編輯人物資料」。",
+    fields: charPanelFields(),
+    item: item,
+    onSubmit: function (values, close, resetSave) {
+      var args = { id: item.id };
+      Object.keys(values).forEach(function (k) { args[k] = values[k]; });
+      mutate("updateCharacter", args)
+        .then(function () { toast("已更新角色面板"); return load(); })
+        .then(close, resetSave)
+        .catch(function (err) { reportErr(err); resetSave(); });
+    }
+  });
 }
 
 /* ── 表單定義 ─────────────────────────────── */
@@ -3381,7 +4257,6 @@ function characterFields() {
     { k: "outfit", label: "平常穿著", ph: "" },
     { k: "habit", label: "特徵／小動作", ph: "" },
     { k: "keepsake", label: "隨身物品／代表物", ph: "" },
-    { k: "color", label: "代表色", ph: "" },
     { k: "transformLook", label: "變身／戰鬥外觀", wide: true, ph: "" },
 
     { group: "性格", k: "personality", label: "三個形容詞", wide: true, ph: "例：獨立、避世、孤單" },
@@ -3400,24 +4275,6 @@ function characterFields() {
     { group: "角色頁", k: "status", label: "狀態", ph: "例：存活／便當／失蹤" },
     { k: "trivia", label: "軼事", type: "textarea", rows: 4, wide: true, ph: "空行分段；支援 **粗體**、> 引用" },
     { k: "quotes", label: "台詞（一行一句；要配音寫「台詞 | media/x.mp3」）", type: "textarea", rows: 5, wide: true, ph: "「你以為重來一次就會不一樣嗎？」" },
-    { group: "同人設定（面板 / 圖鑑）", k: "voiceActor", label: "腦內聲優", ph: "例：某某聲優" },
-    { k: "imprintSong", label: "印象曲", ph: "歌名，或 media/x.mp3" },
-    {
-      k: "stats", label: "能力數值（雷達圖）", type: "kv", wide: true, addLabel: "新增一項能力",
-      hint: "數值 0–10，至少 3 項就會畫出雷達圖；項目名稱可以自己改。",
-      cols: [{ label: "能力名稱" }, { label: "數值", type: "number" }]
-    },
-    {
-      k: "forms", label: "形態變化（滑塊對比）", type: "pipe", wide: true, addLabel: "新增一個形態",
-      hint: "兩個以上、而且都有圖片，就能左右拖動對比。",
-      cols: [{ label: "形態名稱" }, { label: "圖片路徑", type: "image", wide: true }, { label: "說明", wide: true }]
-    },
-    {
-      k: "outfits", label: "服裝 / 裝備圖鑑", type: "pipe", wide: true, addLabel: "新增一套服裝 / 裝備",
-      hint: "每一套都會變成一張圖卡，點開可以看大圖與說明。",
-      cols: [{ label: "名稱" }, { label: "類型（服裝／裝備…）" }, { label: "圖片路徑", type: "image", wide: true }, { label: "說明", wide: true }]
-    },
-
     { group: "能力", k: "transformName", label: "變身型態名稱", ph: "例：白雨" },
     { k: "cost", label: "代價", ph: "例：過度嗜睡" },
     { k: "weakPoint", label: "弱點", ph: "例：怕熱" },
@@ -3445,7 +4302,7 @@ function storyFields() {
   return [
     { group: "故事", k: "title", label: "標題", required: true, wide: true },
     { k: "tags", label: "標籤", ph: "逗號分隔" },
-    { k: "eventId", label: "綁定時間綫節點（同一個節點的多篇＝多視角）", type: "select", options: eventOptions(), wide: true },
+    { k: "eventId", label: "綁定時間綫節點（同一節點多篇＝多視角）", type: "select", options: eventOptions(), wide: true, hint: "可以選標了「個人」的節點——那篇只會出現在該角色的時間綫分頁。" },
     {
       k: "pov", label: "視角人物", type: "select",
       options: S.characters.map(function (c) { return { value: c.id, label: c.name || "未命名" }; })
@@ -3458,6 +4315,14 @@ function storyFields() {
         { value: "日記", label: "日記（日記本＋打字機）" },
         { value: "檔案", label: "檔案（機密檔案＋打字機）" }
       ]
+    },
+    {
+      k: "scope", label: "歸類", type: "select", default: "",
+      options: [
+        { value: "", label: "全員時間綫（公開）" },
+        { value: "personal", label: "只在角色時間綫（個人）" }
+      ],
+      hint: "個人素材不會出現在「時間綫」頁，只掛在該角色的時間綫分頁。"
     },
     { k: "characters", label: "涉及人物", type: "multi", options: S.characters.map(function (c) { return { value: c.id, label: c.name || "未命名" }; }), wide: true },
     {
@@ -3496,6 +4361,14 @@ function eventFields() {
   return [
     { group: "時間綫節點", k: "title", label: "節點標題", required: true, wide: true, ph: "例：第一次變身" },
     { k: "date", label: "時間標記", ph: "例：2017 年 9 月／中四上學期" },
+    {
+      k: "scope", label: "歸類", type: "select", default: "",
+      options: [
+        { value: "", label: "全體事件（出現在時間綫）" },
+        { value: "personal", label: "個人事件（只出現在角色頁）" }
+      ],
+      hint: "個人事件不會出現在「時間綫」頁，只會出現在相關角色的「時間綫」分頁。"
+    },
     { k: "body", label: "內容", type: "textarea", rows: 5, wide: true, ph: "空行分段；支援 **粗體**、> 引用" },
     { k: "characters", label: "涉及人物", type: "multi", options: S.characters.map(function (c) { return { value: c.id, label: c.name || "未命名" }; }), wide: true }
   ];
@@ -3505,9 +4378,29 @@ function galleryFields() {
   return [
     { group: "畫廊圖片", k: "image", label: "圖片", type: "image", wide: true, required: true },
     { k: "title", label: "標題", wide: true, ph: "例：白雨・設定圖" },
+    {
+      k: "group", label: "分類", type: "datalist", ph: "例：立繪／設定圖／草圖／截圖",
+      hint: "用來在畫廊分組；也可以直接填「不展示」，效果等同下面的開關。"
+    },
+    {
+      k: "hidden", label: "要不要展示", type: "select", default: "",
+      options: [
+        { value: "", label: "展示（到處都會出現）" },
+        { value: "1", label: "不展示（只在編輯模式看得到）" }
+      ],
+      hint: "不展示的圖片不會出現在首頁背景、角色立繪、時間綫插圖與首頁畫廊。"
+    },
     { k: "caption", label: "說明", type: "textarea", rows: 2, wide: true, ph: "" },
+    {
+      k: "scope", label: "歸類", type: "select", default: "",
+      options: [
+        { value: "", label: "全員時間綫（公開）" },
+        { value: "personal", label: "只在角色時間綫（個人）" }
+      ],
+      hint: "個人素材不會出現在「時間綫」頁，只掛在該角色的時間綫分頁。"
+    },
     { k: "characters", label: "相關人物", type: "multi", options: S.characters.map(function (c) { return { value: c.id, label: c.name || "未命名" }; }), wide: true },
-    { k: "eventId", label: "綁定時間綫節點", type: "select", options: eventOptions(), wide: true }
+    { k: "eventId", label: "綁定時間綫節點", type: "select", options: eventOptions(), wide: true, hint: "可以選「個人事件」（清單裡標了「個人」的那些）——故事只會出現在該角色的時間綫分頁。" },
   ];
 }
 
@@ -3884,13 +4777,16 @@ function editRelation(id, presetFrom, presetTo) {
   });
 }
 
-function editStory(id) {
+function editStory(id, presetEventId, presetCharId) {
   if (!canEdit()) { toast("唯讀模式無法編輯", true); return; }
   var item = id ? byId(S.stories, id) : null;
+  var seed = {};
+  if (presetEventId) seed.eventId = presetEventId;
+  if (presetCharId) { seed.characters = presetCharId; seed.scope = "personal"; }
   openFormModal({
     title: item ? "編輯故事" : "新增故事",
     fields: storyFields(),
-    item: item || {},
+    item: item || seed,
     onSubmit: function (values, close, resetSave) {
       saveEntity("story", values, id).then(close, resetSave);
     },
@@ -3980,13 +4876,16 @@ function moveEvent(id, dir) {
   chain.then(load).catch(reportErr);
 }
 
-function editGallery(id, presetChar) {
+function editGallery(id, presetChar, presetEventId) {
   if (!canEdit()) { toast("唯讀模式無法編輯", true); return; }
   var item = id ? byId(S.gallery, id) : null;
+  var seed = {};
+  if (presetChar) { seed.characters = presetChar; seed.scope = "personal"; }
+  if (presetEventId) seed.eventId = presetEventId;
   openFormModal({
     title: item ? "編輯圖片" : "新增畫廊圖片",
     fields: galleryFields(),
-    item: item || { characters: presetChar || "" },
+    item: item || seed,
     onSubmit: function (values, close, resetSave) {
       saveEntity("gallery", values, id).then(close, resetSave);
     },
@@ -4160,16 +5059,18 @@ function splitChapters(s) {
 
   if (!raw.length) raw.push({ title: "", date: "", lines: [] });
 
-  return raw.map(function (c, i) {
+  var out = raw.map(function (c, i) {
     var text = c.lines.join("\n").replace(/^\s+|\s+$/g, "");
     return {
       index: i,
-      title: c.title || ("第 " + (i + 1) + " 章"),
+      title: c.title || (found ? ("第 " + (i + 1) + " 章") : ""),
       date: c.date || "",
       body: text,
       chars: countChars(text)
     };
   });
+  out.explicit = found;
+  return out;
 }
 
 /* ── 同一事件的其他視角 ─────────────────── */
@@ -4237,7 +5138,7 @@ function parseStats(str) {
   String(str || "").split(/[\n,，]/).forEach(function (line) {
     var m = line.match(/^\s*([^:：]+)[:：]\s*(-?\d+(?:\.\d+)?)/);
     if (!m) return;
-    out.push({ k: m[1].trim(), v: clamp(parseFloat(m[2]), 0, 10) });
+    out.push({ k: m[1].trim(), v: clamp(parseFloat(m[2]), 0, 5) });
   });
   return out;
 }
@@ -4275,7 +5176,7 @@ function radarChart(stats, color) {
   var shape = document.createElementNS(NS, "polygon");
   var pts2 = [];
   stats.forEach(function (st, j) {
-    var q = pt(j, st.v / 10);
+    var q = pt(j, st.v / 5);
     pts2.push(q[0].toFixed(1) + "," + q[1].toFixed(1));
   });
   shape.setAttribute("points", pts2.join(" "));
@@ -4287,7 +5188,7 @@ function radarChart(stats, color) {
   svg.appendChild(shape);
 
   stats.forEach(function (st, j) {
-    var q = pt(j, st.v / 10);
+    var q = pt(j, st.v / 5);
     var dot = document.createElementNS(NS, "circle");
     dot.setAttribute("cx", q[0]); dot.setAttribute("cy", q[1]);
     dot.setAttribute("r", "3.2");
@@ -4314,8 +5215,77 @@ function pipeLines(str) {
 function parseForms(str) {
   return pipeLines(str).map(function (line) {
     var p = line.split("|").map(function (x) { return x.trim(); });
-    return { name: p[0] || "", image: p[1] || "", desc: p.slice(2).join(" | ") };
+    var f = {
+      name: p[0] || "",
+      image: p[1] || "",
+      zoom: 1, x: 50, y: 50, rot: 0, flip: "0", ratio: "3:4",
+      desc: ""
+    };
+
+    if (p.length >= 9) {
+      f.zoom = clampNum(p[2], 1, 1, 4);
+      f.x = clampNum(p[3], 50, 0, 100);
+      f.y = clampNum(p[4], 50, 0, 100);
+      f.rot = clampNum(p[5], 0, -180, 180);
+      f.flip = String(p[6] || "0");
+      f.ratio = String(p[7] || "3:4");
+      f.desc = p.slice(8).join(" | ");
+    } else if (p.length >= 6) {
+      f.zoom = clampNum(p[2], 1, 1, 4);
+      f.x = clampNum(p[3], 50, 0, 100);
+      f.y = clampNum(p[4], 50, 0, 100);
+      f.desc = p.slice(5).join(" | ");
+    } else {
+      f.desc = p.slice(2).join(" | ");
+    }
+    return f;
   });
+}
+
+function clampNum(v, fallback, lo, hi) {
+  var n = parseFloat(v);
+  if (isNaN(n)) n = fallback;
+  return Math.min(hi, Math.max(lo, n));
+}
+
+function formsText(list) {
+  return list.map(function (f) {
+    var z = String(clampNum(f.zoom, 1, 1, 4));
+    var x = String(Math.round(clampNum(f.x, 50, 0, 100)));
+    var y = String(Math.round(clampNum(f.y, 50, 0, 100)));
+    var r = String(Math.round(clampNum(f.rot, 0, -180, 180)));
+    var flip = String(f.flip || "0");
+    var ratio = String(f.ratio || "3:4");
+
+    /* 沒改過進階設定就寫回 6 欄，有改才寫 9 欄，保持好讀 */
+    var advanced = (r !== "0") || (flip !== "0") || (ratio !== "3:4");
+    return advanced
+      ? [f.name || "", f.image || "", z, x, y, r, flip, ratio, f.desc || ""].join(" | ")
+      : [f.name || "", f.image || "", z, x, y, f.desc || ""].join(" | ");
+  }).join("\n");
+}
+
+function ratioCss(ratio) {
+  var r = String(ratio || "3:4").replace(":", " / ");
+  return /^\d+(\.\d+)? \/ \d+(\.\d+)?$/.test(r) ? r : "3 / 4";
+}
+
+/* 把裁切／旋轉／翻轉設定套到 img 上 */
+function applyFrame(img, item) {
+  var z = clampNum(item && item.zoom, 1, 1, 4);
+  var x = clampNum(item && item.x, 50, 0, 100);
+  var y = clampNum(item && item.y, 50, 0, 100);
+  var r = clampNum(item && item.rot, 0, -180, 180);
+  var fp = String((item && item.flip) || "0");
+  var sx = fp.indexOf("h") >= 0 ? -1 : 1;
+  var sy = fp.indexOf("v") >= 0 ? -1 : 1;
+
+  img.style.objectPosition = x + "% " + y + "%";
+  img.style.transformOrigin = "center center";
+  img.style.transform =
+    "scale(" + z + ")" +
+    (r ? " rotate(" + r + "deg)" : "") +
+    ((sx < 0 || sy < 0) ? " scale(" + sx + "," + sy + ")" : "");
 }
 
 function parseOutfits(str) {
@@ -4328,8 +5298,12 @@ function parseOutfits(str) {
 /* ── 左右拖動對比兩張圖 ─────────────────── */
 function compareSlider(a, b, labelA, labelB) {
   var box = h("div", { class: "compare" });
+  box.style.aspectRatio = ratioCss(a && a.ratio);
   var imgA = h("img", { src: a.image || "", alt: a.name || "" });
-  var holder = h("div", { class: "cmp-b-hold" }, h("img", { src: b.image || "", alt: b.name || "" }));
+  applyFrame(imgA, a);
+  var imgBEl = h("img", { src: b.image || "", alt: b.name || "" });
+  applyFrame(imgBEl, b);
+  var holder = h("div", { class: "cmp-b-hold" }, imgBEl);
   var handle = h("div", { class: "cmp-handle" }, h("span", { class: "cmp-knob", text: "⇄" }));
   box.appendChild(imgA);
   box.appendChild(holder);
@@ -4473,7 +5447,11 @@ function listEditor(f, item) {
           type: col.type === "number" ? "number" : "text",
           placeholder: col.label || ""
         });
-        if (col.type === "number") { input.min = "0"; input.max = "10"; input.step = "1"; }
+        if (col.type === "number") {
+          input.min = String(col.min === undefined ? 0 : col.min);
+          input.max = String(col.max === undefined ? 10 : col.max);
+          input.step = "1";
+        }
         input.value = r[j] || "";
         input.addEventListener("input", function () { rows[i][j] = input.value; sync(); });
         cell.appendChild(input);
@@ -4517,8 +5495,13 @@ function listEditor(f, item) {
 function mediaCard(item, kindLabel, onClick) {
   var card = h("button", { class: "outfit-card", type: "button" });
   var thumb = h("div", { class: "outfit-thumb" });
-  if (item.image) thumb.appendChild(h("img", { src: item.image, alt: item.name || "", loading: "lazy" }));
-  else thumb.appendChild(h("span", { class: "ph", text: "◇" }));
+  if (item.image) {
+    var im = h("img", { src: item.image, alt: item.name || "", loading: "lazy" });
+    if (item.zoom || item.x || item.y || item.rot || item.flip) applyFrame(im, item);
+    thumb.appendChild(im);
+  } else {
+    thumb.appendChild(h("span", { class: "ph", text: "◇" }));
+  }
   card.appendChild(thumb);
   var body = h("div", { class: "outfit-body" });
   body.appendChild(h("span", { class: "outfit-name", text: item.name || "未命名" }));
@@ -4805,6 +5788,11 @@ function init() {
 
   /* 雲端寫入已停用，清掉舊的 token 設定 */
   try { localStorage.removeItem(GH_KEY); } catch (e) { /* 忽略 */ }
+
+  var sBtn = el("searchBtn");
+  if (sBtn) sBtn.addEventListener("click", function () { location.hash = "#/search"; });
+  var bBtn = el("backupBtn");
+  if (bBtn) bBtn.addEventListener("click", backupWorld);
 
   window.addEventListener("hashchange", function () {
     render();
